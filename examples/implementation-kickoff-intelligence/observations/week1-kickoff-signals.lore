@@ -1,0 +1,33 @@
+---
+observations: Week 1 Kickoff Signals
+about: Client
+observed_by: kickoff-synthesis-agent
+date: 2026-02-21
+confidence: 0.81
+status: proposed
+provenance:
+  author: kickoff-synthesis-agent
+  source: ai-generated
+  confidence: 0.81
+  created: 2026-02-21
+---
+
+## Helio Health has security-first procurement motion
+
+Helio repeatedly deferred sandbox start dates until security and legal packet
+ownership was explicit in the call notes.
+
+Fact: Helio requires completed security questionnaire before sandbox access.
+Belief: Security and procurement reviews are running in parallel without a single owner.
+Value: The client prioritizes compliance certainty over launch speed.
+Precedent: Similar regulated clients slipped 3-5 weeks when questionnaire ownership was ambiguous.
+
+## Apex Logistics integration scope is wider than expected
+
+Apex requested Salesforce, Snowflake, and Okta integration in phase 1 while
+assuming a single integration engineer could support the timeline.
+
+Fact: Apex requested three external system integrations for phase 1 go-live.
+Belief: Current staffing assumptions are insufficient for scope and timeline.
+Value: Buyer expects measurable dashboard output in the first 30 days.
+Precedent: Multi-system phase 1 scope has historically increased decision latency during sign-off.

@@ -6,6 +6,7 @@ The parser handles YAML frontmatter, section-based content, and the
 various sub-formats (attributes, relationships, taxonomies, etc.)
 """
 from __future__ import annotations
+import importlib
 import re
 import yaml
 from pathlib import Path
@@ -15,6 +16,7 @@ from .models import (
     Relationship, RelationshipProperty, RelationshipFile, Traversal,
     Rule, RuleFile, Taxonomy, TaxonomyNode, Glossary, GlossaryEntry,
     View, Provenance, Observation, ObservationFile, Outcome, OutcomeFile,
+    KnowledgeClaim,
 )
 
 
@@ -61,7 +63,11 @@ def parse_ontology(root_dir: str | Path) -> Ontology:
     glossary_dir = root / "glossary"
     if glossary_dir.exists():
         for f in _lore_files(glossary_dir):
-            ontology.glossary = _parse_glossary(f)
+            parsed = _parse_glossary(f)
+            if ontology.glossary is None:
+                ontology.glossary = parsed
+            else:
+                _merge_glossary(ontology.glossary, parsed)
 
     # Parse views
     views_dir = root / "views"
@@ -81,6 +87,10 @@ def parse_ontology(root_dir: str | Path) -> Ontology:
         for f in _lore_files(outcomes_dir):
             ontology.outcome_files.append(_parse_outcome_file(f))
 
+    # Parse plugin directories (generic files or plugin parser outputs)
+    if ontology.manifest and ontology.manifest.plugins:
+        _parse_extension_directories(ontology, root)
+
     return ontology
 
 
@@ -93,6 +103,68 @@ def _split_frontmatter(text: str) -> tuple[dict, str]:
             body = parts[2].strip()
             return fm, body
     return {}, text.strip()
+
+
+def _load_plugin_callable(entrypoint: str):
+    """
+    Load a plugin callable from a module:function entrypoint string.
+
+    Returns None if the entrypoint cannot be loaded.
+    """
+    if not entrypoint or ":" not in entrypoint:
+        return None
+    module_name, fn_name = entrypoint.split(":", 1)
+    module_name = module_name.strip()
+    fn_name = fn_name.strip()
+    if not module_name or not fn_name:
+        return None
+    try:
+        module = importlib.import_module(module_name)
+        fn = getattr(module, fn_name)
+    except Exception:
+        return None
+    return fn if callable(fn) else None
+
+
+def _parse_extension_directories(ontology: Ontology, root: Path):
+    """Parse custom directories configured in manifest plugins."""
+    plugins = ontology.manifest.plugins if ontology.manifest else None
+    if not plugins:
+        return
+    if not plugins.directories:
+        return
+
+    for dirname in plugins.directories:
+        dir_path = root / dirname
+        if not dir_path.exists():
+            continue
+
+        parser_fn = None
+        if plugins.directory_parsers:
+            parser_fn = _load_plugin_callable(plugins.directory_parsers.get(dirname, ""))
+
+        parsed_items = []
+        for file_path in _lore_files(dir_path):
+            if parser_fn:
+                parsed = parser_fn(file_path)
+            else:
+                parsed = _parse_generic_lore(file_path)
+            if parsed is not None:
+                parsed_items.append(parsed)
+        if parsed_items:
+            ontology.extensions[dirname] = parsed_items
+
+
+def _parse_generic_lore(path: Path) -> dict:
+    """Parse custom .lore file into frontmatter + sections."""
+    text = path.read_text()
+    fm, body = _split_frontmatter(text)
+    return {
+        "source_file": path,
+        "frontmatter": fm,
+        "sections": _split_sections(body),
+        "body": body,
+    }
 
 
 def _split_sections(body: str) -> dict[str, str]:
@@ -154,6 +226,7 @@ def _parse_manifest(path: Path) -> OntologyManifest:
         compilers = {}
         curators = {}
         directories = []
+        directory_parsers = {}
         comp_data = plugins_data.get("compilers")
         if isinstance(comp_data, dict):
             compilers = {str(k): str(v) for k, v in comp_data.items()}
@@ -163,10 +236,14 @@ def _parse_manifest(path: Path) -> OntologyManifest:
         dir_data = plugins_data.get("directories")
         if isinstance(dir_data, list):
             directories = [str(d) for d in dir_data]
+        elif isinstance(dir_data, dict):
+            directory_parsers = {str(k): str(v) for k, v in dir_data.items()}
+            directories = list(directory_parsers.keys())
         plugins = PluginConfig(
             compilers=compilers,
             curators=curators,
             directories=directories,
+            directory_parsers=directory_parsers,
         )
     return OntologyManifest(
         name=data.get("name", ""),
@@ -191,54 +268,72 @@ def _parse_attributes(text: str) -> list[Attribute]:
             i += 1
             continue
 
-        # Match: attr_name: type [constraints]
-        match = re.match(
-            r'^(\w+):\s*(.+?)(?:\s*\[(.+?)\])?\s*$', line
-        )
-        if match:
-            attr_name = match.group(1)
-            attr_type = match.group(2).strip()
-            constraints_str = match.group(3) or ""
-            constraints = [c.strip() for c in constraints_str.split(",") if c.strip()]
-
-            # Check for reference type
-            reference_to = None
-            if attr_type.startswith("->"):
-                reference_to = attr_type[2:].strip()
-                attr_type = "reference"
-            elif attr_type.startswith("list<->"):
-                inner = attr_type[7:].rstrip(">").strip()
-                reference_to = inner
-                attr_type = "list<reference>"
-
-            # Collect description lines (starting with |)
-            desc_lines: list[str] = []
-            annotations: dict[str, str] = {}
+        header = re.match(r"^(\w+):\s*(.+?)\s*$", line)
+        if not header:
             i += 1
-            while i < len(lines):
-                dline = lines[i].strip()
-                if dline.startswith("| ") or dline == "|":
-                    content = dline[2:] if dline.startswith("| ") else ""
-                    # Check for annotations
-                    ann_match = re.match(r'^@(\w+):\s*(.+)$', content)
-                    if ann_match:
-                        annotations[ann_match.group(1)] = ann_match.group(2)
-                    else:
-                        desc_lines.append(content)
-                    i += 1
-                else:
-                    break
+            continue
 
-            attrs.append(Attribute(
-                name=attr_name,
-                type=attr_type,
-                constraints=constraints,
-                description=" ".join(desc_lines).strip(),
-                annotations=annotations,
-                reference_to=reference_to,
-            ))
+        attr_name = header.group(1)
+        tail = header.group(2).strip()
+        attr_type = tail
+        constraints: list[str] = []
+        enum_values: list[str] = []
+
+        enum_match = re.match(r"^enum\s*\[(.+?)\](?:\s*\[(.+?)\])?$", tail)
+        if enum_match:
+            attr_type = "enum"
+            enum_values = [
+                v.strip() for v in enum_match.group(1).split(",") if v.strip()
+            ]
+            constraints_str = enum_match.group(2) or ""
+            constraints = [
+                c.strip() for c in constraints_str.split(",") if c.strip()
+            ]
         else:
-            i += 1
+            typed = re.match(r"^(.+?)(?:\s*\[(.+?)\])?$", tail)
+            if typed:
+                attr_type = typed.group(1).strip()
+                constraints_str = typed.group(2) or ""
+                constraints = [
+                    c.strip() for c in constraints_str.split(",") if c.strip()
+                ]
+
+        # Check for reference type
+        reference_to = None
+        if attr_type.startswith("->"):
+            reference_to = attr_type[2:].strip()
+            attr_type = "reference"
+        elif attr_type.startswith("list<->"):
+            inner = attr_type[7:].rstrip(">").strip()
+            reference_to = inner
+            attr_type = "list<reference>"
+
+        # Collect description lines (starting with |)
+        desc_lines: list[str] = []
+        annotations: dict[str, str] = {}
+        i += 1
+        while i < len(lines):
+            dline = lines[i].strip()
+            if dline.startswith("| ") or dline == "|":
+                content = dline[2:] if dline.startswith("| ") else ""
+                ann_match = re.match(r'^@(\w+):\s*(.+)$', content)
+                if ann_match:
+                    annotations[ann_match.group(1)] = ann_match.group(2)
+                else:
+                    desc_lines.append(content)
+                i += 1
+            else:
+                break
+
+        attrs.append(Attribute(
+            name=attr_name,
+            type=attr_type,
+            constraints=constraints,
+            enum_values=enum_values,
+            description=" ".join(desc_lines).strip(),
+            annotations=annotations,
+            reference_to=reference_to,
+        ))
 
     return attrs
 
@@ -279,6 +374,7 @@ def _parse_relationship_block(lines: list[str], name: str) -> Relationship | Non
     desc_lines: list[str] = []
     properties: list[RelationshipProperty] = []
     in_properties = False
+    current_property: RelationshipProperty | None = None
 
     for line in lines:
         stripped = line.strip()
@@ -290,19 +386,24 @@ def _parse_relationship_block(lines: list[str], name: str) -> Relationship | Non
                 to_entity = match.group(2)
         elif stripped.startswith("cardinality:"):
             cardinality = stripped.split(":", 1)[1].strip()
-        elif stripped.startswith("| "):
-            desc_lines.append(stripped[2:])
         elif stripped == "properties:":
             in_properties = True
+        elif in_properties and stripped.startswith("| ") and current_property:
+            extra = stripped[2:].strip()
+            if extra:
+                current_property.description = (
+                    f"{current_property.description} {extra}".strip()
+                )
         elif in_properties and ":" in stripped:
             prop_match = re.match(r'(\w+):\s*(.+)', stripped)
             if prop_match:
-                prop_desc = ""
-                properties.append(RelationshipProperty(
+                current_property = RelationshipProperty(
                     name=prop_match.group(1),
-                    type=prop_match.group(2),
-                    description=prop_desc,
-                ))
+                    type=prop_match.group(2).strip(),
+                )
+                properties.append(current_property)
+        elif stripped.startswith("| "):
+            desc_lines.append(stripped[2:])
 
     if from_entity and to_entity:
         return Relationship(
@@ -580,6 +681,16 @@ def _parse_glossary(path: Path) -> Glossary:
     return glossary
 
 
+def _merge_glossary(base: Glossary, other: Glossary) -> None:
+    """Merge glossary entries/descriptions from another glossary file."""
+    if other.description:
+        if base.description:
+            base.description = f"{base.description.strip()}\n\n{other.description.strip()}"
+        else:
+            base.description = other.description
+    base.entries.extend(other.entries)
+
+
 def _parse_view(path: Path) -> View:
     """Parse a view .lore file."""
     text = path.read_text()
@@ -622,6 +733,26 @@ def _parse_list_items(text: str) -> list[str]:
     return items
 
 
+_CLAIM_KINDS = {"fact", "belief", "value", "precedent"}
+
+
+def _extract_claims(content: str) -> tuple[str, list[KnowledgeClaim]]:
+    """Extract semi-structured claim lines from observation prose."""
+    prose_lines: list[str] = []
+    claims: list[KnowledgeClaim] = []
+    for line in content.split("\n"):
+        stripped = line.strip()
+        claim_match = re.match(r"^(Fact|Belief|Value|Precedent):\s*(.+)$", stripped, re.IGNORECASE)
+        if claim_match:
+            kind = claim_match.group(1).lower()
+            if kind in _CLAIM_KINDS:
+                claims.append(KnowledgeClaim(kind=kind, text=claim_match.group(2).strip()))
+                continue
+        prose_lines.append(line)
+    prose = "\n".join(prose_lines).strip()
+    return prose, claims
+
+
 def _parse_observation_file(path: Path) -> ObservationFile:
     """Parse an observations .lore file."""
     text = path.read_text()
@@ -650,9 +781,11 @@ def _parse_observation_file(path: Path) -> ObservationFile:
     for section_name, content in sections.items():
         if section_name == "__preamble__":
             continue
+        prose, claims = _extract_claims(content)
         of.observations.append(Observation(
             heading=section_name,
-            prose=content.strip(),
+            prose=prose,
+            claims=claims,
         ))
 
     return of

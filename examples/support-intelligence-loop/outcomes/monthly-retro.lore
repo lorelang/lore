@@ -1,0 +1,31 @@
+---
+outcomes: February Support Intelligence Retrospective
+reviewed_by: support-retro-agent
+date: 2026-02-22
+provenance:
+  author: support-retro-agent
+  source: ai-generated
+  confidence: 0.85
+  created: 2026-02-22
+status: proposed
+---
+
+## OrbitPay intervention - partially correct
+
+The retention team launched a targeted onboarding intervention and prevented immediate
+escalation, but renewal confidence remained mixed pending process improvements.
+
+Takeaway: onboarding-friction recurrence should trigger proactive success outreach before renewal window
+Takeaway: add resolution ownership clarity as a first-class support case attribute candidate
+
+Ref: observations/week7-voc-synthesis.lore#orbitpay-churn-risk-appears-through-repeated-onboarding-friction
+
+## DeltaGrid reliability escalation - correct
+
+DeltaGrid accepted remediation plan after cross-functional escalation identified a shared
+identity connector defect. Reopen trend declined after fix rollout.
+
+Takeaway: p1 reopen clusters around a single integration path should auto-trigger incident review
+Takeaway: map integration debt themes directly to roadmap and reliability planning workflows
+
+Ref: observations/week7-voc-synthesis.lore#deltagrid-reliability-complaints-are-concentrated-in-one-integration-path

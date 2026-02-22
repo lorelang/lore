@@ -1,0 +1,20 @@
+---
+index: true
+generated: 2026-02-22
+---
+
+## Overview
+
+Domain entities (3 total). Each file defines one concept with attributes, identity, and prose notes.
+
+## Contents
+
+- `client.lore` — **Client** (5 attrs, notes, identity)
+- `engagement.lore` — **Engagement** (4 attrs, notes, identity)
+- `stakeholder.lore` — **Stakeholder** (3 attrs, notes, identity)
+
+## Search Guide
+
+- To find an entity by name: `grep -l 'entity: Name' entities/*.lore`
+- To find entities with a specific attribute: `grep -l 'attr_name:' entities/*.lore`
+- To find entities by domain concept: `grep -rl 'keyword' entities/`

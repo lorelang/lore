@@ -1,0 +1,36 @@
+---
+domain: Kickoff Intelligence Rules
+description: Rules for promoting meeting-derived onboarding insights into execution guardrails.
+---
+
+## security-review-critical-path
+  applies_to: Client
+  severity: critical
+  trigger: Kickoff synthesis detects security and legal blockers
+
+  condition:
+    Client.procurement_motion = "security-first"
+    AND latest_observation_mentions("questionnaire pending")
+
+  action:
+    Create implementation risk alert
+    Assign security-review owner in delivery tracker
+    Attach precedent signals from similar clients
+
+  Security blockers are often clear in meeting narrative before they are represented in project plans.
+
+## integration-readiness-watch
+  applies_to: Integration
+  severity: warning
+  trigger: Daily implementation synthesis run
+  outputs: Integration.readiness
+
+  condition:
+    Integration.readiness in ["unknown", "blocked"]
+    AND Integration.estimated_effort_days > 10
+
+  action:
+    Mark dependent workstreams as risk_pattern = "dependency-slip"
+    Queue scope review with implementation lead
+
+  This rule is best-effort and should be interpreted alongside unstructured context.

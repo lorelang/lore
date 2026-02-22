@@ -1,0 +1,23 @@
+---
+observations: Product Upgrade Friction Review
+about: Product
+observed_by: catalog-intel-agent
+date: 2026-02-21
+confidence: 0.71
+status: proposed
+provenance:
+  author: catalog-intel-agent
+  source: ai-generated
+  confidence: 0.71
+  created: 2026-02-21
+---
+
+## Upgrade friction concentrates around security and migration concerns
+
+Accounts with strong feature demand still delayed upgrades when migration effort
+and security controls were not addressed in packaging conversations.
+
+Fact: Security and migration concerns repeatedly blocked otherwise qualified upgrade intent.
+Belief: Product packaging signals should encode implementation burden explicitly.
+Value: Upgrade motions should emphasize risk-managed transition, not only feature breadth.
+Precedent: Similar concerns delayed Enterprise conversion in historical product cohorts.

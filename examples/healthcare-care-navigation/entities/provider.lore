@@ -1,0 +1,33 @@
+---
+entity: Provider
+description: Clinical provider or care team responsible for treatment delivery.
+provenance:
+  author: care-navigation-team
+  source: domain-expert
+  confidence: 0.9
+  created: 2026-02-20
+status: stable
+---
+
+## Attributes
+
+provider_id: string [required, unique]
+  | Provider identifier.
+
+specialty: enum [cardiology, oncology, endocrinology, neurology, primary-care]
+  | Clinical specialty.
+
+capacity_band: enum [constrained, moderate, available]
+  | Operational availability for new episodes.
+
+network_status: enum [in-network, out-of-network, mixed]
+  | Insurance network participation profile.
+
+## Identity
+
+Provider is uniquely identified by provider_id.
+
+## Notes
+
+Capacity and network availability are frequently inferred first from unstructured
+scheduling observations, then reconciled into structured systems.

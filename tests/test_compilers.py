@@ -3,6 +3,7 @@ import json
 import pytest
 from lore.compilers.agent import compile_agent_context
 from lore.compilers.json_export import compile_json
+from lore.compilers.jsonld import compile_jsonld
 from lore.compilers.neo4j import compile_neo4j
 from lore.compilers.mermaid import compile_mermaid
 from lore.compilers.embeddings import compile_embeddings
@@ -123,6 +124,11 @@ class TestAgentCompiler:
         assert '<entity name="Widget">' in result
         assert '<entity name="Person">' in result
 
+    def test_agent_guidance_present(self, minimal_ontology):
+        result = compile_agent_context(minimal_ontology)
+        assert "<agent_guidance>" in result
+        assert "unstructured-first" in result
+
     def test_entity_attributes_included(self, minimal_ontology):
         result = compile_agent_context(minimal_ontology)
         assert "id: string" in result
@@ -162,6 +168,82 @@ class TestAgentCompiler:
         result = compile_agent_context(minimal_ontology, view_name="NonExistent")
         # Should still produce output, just not scoped
         assert "<domain_ontology>" in result
+
+    def test_view_scopes_relationships_and_rules(self):
+        ont = Ontology(
+            manifest=OntologyManifest(name="scope-test", version="1.0"),
+            entities=[
+                Entity(name="A", attributes=[Attribute(name="id", type="string")]),
+                Entity(name="B", attributes=[Attribute(name="id", type="string")]),
+                Entity(name="C", attributes=[Attribute(name="id", type="string")]),
+            ],
+            relationship_files=[RelationshipFile(
+                domain="Core",
+                relationships=[
+                    Relationship(name="R1", from_entity="A", to_entity="B"),
+                    Relationship(name="R2", from_entity="B", to_entity="C"),
+                ],
+            )],
+            rule_files=[RuleFile(
+                domain="Rules",
+                rules=[
+                    Rule(name="rule-1", applies_to="A"),
+                    Rule(name="rule-2", applies_to="C"),
+                ],
+            )],
+            views=[View(
+                name="Focused",
+                entities=["A", "B"],
+                relationships=["R1"],
+                rules=["rule-1"],
+                key_questions=["Q"],
+            )],
+        )
+        result = compile_agent_context(ont, view_name="Focused")
+        assert "A -[R1]-> B" in result
+        assert "B -[R2]-> C" not in result
+        assert 'name="rule-1"' in result
+        assert 'name="rule-2"' not in result
+
+    def test_view_prose_placeholders_scope(self):
+        ont = Ontology(
+            manifest=OntologyManifest(name="scope-test", version="1.0"),
+            entities=[
+                Entity(name="A", attributes=[Attribute(name="id", type="string")]),
+                Entity(name="B", attributes=[Attribute(name="id", type="string")]),
+                Entity(name="C", attributes=[Attribute(name="id", type="string")]),
+            ],
+            relationship_files=[
+                RelationshipFile(
+                    domain="Commercial",
+                    relationships=[Relationship(name="R1", from_entity="A", to_entity="B")],
+                    traversals=[Traversal(name="t1", path="A -[R1]-> B")],
+                ),
+                RelationshipFile(
+                    domain="Engagement",
+                    relationships=[Relationship(name="R2", from_entity="B", to_entity="C")],
+                    traversals=[Traversal(name="t2", path="B -[R2]-> C")],
+                ),
+            ],
+            rule_files=[
+                RuleFile(domain="Scoring", rules=[Rule(name="score-rule", applies_to="A")]),
+                RuleFile(domain="Alerts", rules=[Rule(name="alert-rule", applies_to="C")]),
+            ],
+            views=[View(
+                name="Prose",
+                entities=["All entities with all attributes"],
+                relationships=["All commercial relationships", "All traversals"],
+                rules=["All scoring rules"],
+                key_questions=["Q"],
+            )],
+        )
+        result = compile_agent_context(ont, view_name="Prose")
+        assert "A -[R1]-> B" in result
+        assert "B -[R2]-> C (" not in result
+        assert "t1:" in result
+        assert "t2:" in result
+        assert 'name="score-rule"' in result
+        assert 'name="alert-rule"' not in result
 
     def test_full_example(self, example_ontology):
         result = compile_agent_context(example_ontology)
@@ -237,6 +319,29 @@ class TestJsonCompiler:
         data = json.loads(compile_json(example_ontology))
         assert len(data["entities"]) == 11
         assert len(data["relationships"]) == 18
+
+
+# --- JSON-LD Compiler ---
+
+class TestJsonLdCompiler:
+    def test_valid_jsonld(self, minimal_ontology):
+        data = json.loads(compile_jsonld(minimal_ontology))
+        assert "@context" in data
+        assert "@graph" in data
+
+    def test_has_entity_classes(self, minimal_ontology):
+        data = json.loads(compile_jsonld(minimal_ontology))
+        graph = data["@graph"]
+        labels = {node.get("label") for node in graph}
+        assert "Widget" in labels
+        assert "Person" in labels
+
+    def test_has_relationship_property(self, minimal_ontology):
+        data = json.loads(compile_jsonld(minimal_ontology))
+        graph = data["@graph"]
+        rel_nodes = [n for n in graph if n.get("@id", "").startswith("lore:Relationship/")]
+        assert len(rel_nodes) == 1
+        assert rel_nodes[0]["label"] == "OWNS"
 
 
 # --- Neo4j Compiler ---

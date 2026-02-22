@@ -5,6 +5,12 @@ description: >
   a time period. Usage is the strongest leading indicator
   of both expansion and churn — it reveals whether the
   customer is getting value from the product.
+provenance:
+  author: revops-team
+  source: domain-expert
+  confidence: 0.91
+  created: 2026-02-22
+status: stable
 ---
 
 ## Attributes
@@ -41,6 +47,11 @@ adoption_score: float [0.0 .. 1.0]
 usage_trend: enum [growing, stable, declining]
   | Direction of usage over the last 3 periods.
   | @computed: rules/scoring.lore#usage-trend
+
+## Identity
+
+A Usage record is identified by period_start and period
+within an account context.
 
 ## Notes
 

@@ -367,17 +367,14 @@ class TestBackwardCompatibility:
         assert len(errors) == 0
 
     def test_v01_example_entities_provenance_optional(self, example_ontology):
-        """Original v0.1 entities have no provenance; new v0.2 entities may have it."""
-        # Original entities (Account, Contact, etc.) still have no provenance
-        original_entities = ["Account", "Contact", "Interaction", "Opportunity",
-                             "Signal", "Subscription", "Usage"]
+        """Example entities may include provenance, and parser handles both forms."""
         for entity in example_ontology.entities:
-            if entity.name in original_entities:
-                assert entity.provenance is None, f"{entity.name} should not have provenance"
-                assert entity.status == "", f"{entity.name} should have empty status"
-        # New v0.2 entities (Competitor, Feature, Play, Product) may have provenance
+            if entity.provenance is None:
+                assert entity.status == ""
+            else:
+                assert entity.provenance.created != ""
         entities_with_provenance = [e for e in example_ontology.entities if e.provenance is not None]
-        assert len(entities_with_provenance) >= 1, "At least some new entities should have provenance"
+        assert len(entities_with_provenance) >= 1, "At least some entities should have provenance"
 
     def test_v01_compilers_still_work(self, example_ontology):
         """All compilers should still produce valid output."""

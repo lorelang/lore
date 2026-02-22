@@ -1,0 +1,15 @@
+---
+description: Canonical terms used in implementation synthesis and planning.
+---
+
+## Kickoff Signal
+
+A narrative clue from onboarding conversations that predicts delivery outcomes.
+
+## Ownership Gap
+
+A condition where no stakeholder is clearly accountable for a critical workstream.
+
+## Integration Readiness
+
+A best-effort estimate of whether technical dependencies are clear and executable.

@@ -2,14 +2,14 @@
 observations: Q2 Account Expansion Signals
 about: Account
 observed_by: expansion-agent-v2
-date: 2025-06-15
-confidence: 0.75
+date: 2026-02-20
+confidence: 0.58
 status: proposed
 provenance:
   author: expansion-agent-v2
   source: ai-generated
-  confidence: 0.75
-  created: 2025-06-15
+  confidence: 0.58
+  created: 2026-02-20
 ---
 
 ## Acme Corp shows expansion readiness
@@ -26,6 +26,11 @@ This pattern has historically preceded expansion in 78% of
 similar enterprise accounts. Recommend AE outreach within
 2 weeks, leading with the multi-department adoption story.
 
+Fact: Acme showed simultaneous usage growth, department spread, and executive engagement.
+Belief: Combined signal clusters are stronger than single-metric triggers for expansion timing.
+Value: Outreach should emphasize cross-functional value realization, not generic upsell messaging.
+Precedent: Similar multi-signal patterns have repeatedly preceded successful expansion close events.
+
 ## Beta Corp usage decline looks seasonal
 
 Beta Corp (beta.io) showed a 30% usage decline in Q4,
@@ -35,6 +40,11 @@ of their four peer accounts showed similar dips.
 This is likely NOT a churn signal. The usage-decline-alert
 rule fired here but was a false positive. Consider adding
 seasonal adjustment to the rule.
+
+Fact: Beta usage decline aligned with peer seasonal behavior rather than account-specific distress.
+Belief: Industry-aware seasonality adjustments are required for reliable decline detection.
+Value: Avoid high-cost churn escalations when contextual evidence points to benign seasonality.
+Precedent: Multiple prior cyclical accounts produced similar false positives in Q4/Q1 windows.
 
 ## Gamma Inc rapid onboarding
 
@@ -46,3 +56,8 @@ access and enterprise features.
 This looks like a fast-track expansion candidate. The
 seat-expansion-trigger rule should fire within 2 weeks
 at this adoption rate.
+
+Fact: Gamma onboarded significantly above segment baseline and requested enterprise capabilities early.
+Belief: Onboarding velocity plus API/security interest indicates rapid enterprise-intent maturation.
+Value: Fast-track accounts should receive proactive AE engagement before formal expansion requests.
+Precedent: Similar velocity and signal combinations have previously converted quickly to higher tiers.

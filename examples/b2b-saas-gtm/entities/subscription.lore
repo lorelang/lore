@@ -5,6 +5,12 @@ description: >
   Subscriptions are the revenue unit — ARR, expansion, and
   contraction are measured at the subscription level and
   aggregated to the account.
+provenance:
+  author: revops-team
+  source: domain-expert
+  confidence: 0.92
+  created: 2026-02-22
+status: stable
 ---
 
 ## Attributes
@@ -45,6 +51,10 @@ seat_utilization: float [0.0 .. 1.0]
 expansion_eligible: boolean
   | Whether this subscription is eligible for upsell
   | or expansion based on plan type and contract terms.
+
+## Identity
+
+A Subscription is identified by subscription_id.
 
 ## Notes
 

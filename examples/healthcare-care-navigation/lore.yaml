@@ -1,0 +1,13 @@
+name: healthcare-care-navigation
+version: 0.2.0
+description: >
+  AI-first ontology for specialty care navigation across referral intake,
+  scheduling, adherence, and care outcomes.
+domain: Healthcare Care Operations
+maintainers:
+  - name: Care Navigation Team
+    role: Domain Owner
+
+evolution:
+  proposals: review-required
+  staleness: 30d

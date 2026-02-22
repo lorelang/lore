@@ -1,0 +1,29 @@
+---
+proposal: General improvements
+provenance:
+  source: derived
+  confidence: 0.65
+status: proposed
+review_required: true
+review_state: pending
+---
+
+## Summary
+
+Takeaways that don't map to a specific rule or entity.
+Based on 2 takeaway(s).
+
+## Takeaways
+
+- convert security precedent signals into a reusable rule template
+- expansion-intent beliefs should be separated from timeline-confidence beliefs
+
+## Source Outcomes
+
+- Northwind delay risk prediction — correct
+- Brightwell expansion intent prediction — partially correct
+
+## References
+
+- observations/discovery-call-week1.lore#northwind-security-process-is-a-rollout-gate
+- observations/discovery-call-week1.lore#brightwell-has-latent-expansion-intent

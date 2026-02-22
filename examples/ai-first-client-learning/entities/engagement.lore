@@ -1,0 +1,33 @@
+---
+entity: Engagement
+description: A meeting, call, workshop, or async interaction with the client.
+provenance:
+  author: founder-office
+  source: domain-expert
+  confidence: 0.9
+  created: 2026-02-20
+status: stable
+---
+
+## Attributes
+
+occurred_at: datetime [required]
+  | UTC timestamp for the interaction.
+
+channel: enum [zoom, onsite, email, slack, loom]
+  | Primary interaction channel.
+
+summary: text
+  | Human-readable synopsis of what happened.
+
+signal_strength: float [0.0 .. 1.0]
+  | Best-effort confidence score from synthesis pipeline.
+
+## Identity
+
+Engagements are uniquely identified by occurred_at and participants.
+
+## Notes
+
+Engagement is the source material for observation claims. Keep it unstructured
+and rich; downstream compilers can extract structure when needed.

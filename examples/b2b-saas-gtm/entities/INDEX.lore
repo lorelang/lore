@@ -1,0 +1,28 @@
+---
+index: true
+generated: 2026-02-22
+---
+
+## Overview
+
+Domain entities (11 total). Each file defines one concept with attributes, identity, and prose notes.
+
+## Contents
+
+- `account.lore` — **Account** (14 attrs, notes, identity)
+- `competitor.lore` — **Competitor** (9 attrs, notes, identity)
+- `contact.lore` — **Contact** (10 attrs, notes, identity)
+- `feature.lore` — **Feature** (8 attrs, notes, identity)
+- `interaction.lore` — **Interaction** (8 attrs, notes, identity)
+- `opportunity.lore` — **Opportunity** (11 attrs, notes, identity)
+- `play.lore` — **Play** (7 attrs, notes, identity)
+- `product.lore` — **Product** (12 attrs, notes, identity)
+- `signal.lore` — **Signal** (7 attrs, notes, identity)
+- `subscription.lore` — **Subscription** (11 attrs, notes, identity)
+- `usage.lore` — **Usage** (9 attrs, notes, identity)
+
+## Search Guide
+
+- To find an entity by name: `grep -l 'entity: Name' entities/*.lore`
+- To find entities with a specific attribute: `grep -l 'attr_name:' entities/*.lore`
+- To find entities by domain concept: `grep -rl 'keyword' entities/`

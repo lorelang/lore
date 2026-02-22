@@ -1,0 +1,17 @@
+---
+index: true
+generated: 2026-02-22
+---
+
+## Overview
+
+Relationship definitions (2 total across 1 files).
+
+## Contents
+
+- `navigation.lore` — Care Navigation: HAS_EPISODE, ASSIGNED_TO
+
+## Relationship Map
+
+- PatientCohort --[HAS_EPISODE]--> CareEpisode
+- CareEpisode --[ASSIGNED_TO]--> Provider

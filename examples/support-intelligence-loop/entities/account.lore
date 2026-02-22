@@ -1,0 +1,32 @@
+---
+entity: Account
+description: A customer organization associated with support interactions and retention risk.
+provenance:
+  author: support-ops
+  source: domain-expert
+  confidence: 0.9
+  created: 2026-02-22
+status: stable
+---
+
+## Attributes
+
+name: string [required, unique]
+  | Canonical account name.
+
+domain: string [required, unique]
+  | Primary web domain.
+
+segment: enum [smb, mid-market, enterprise]
+  | Commercial segment for support coverage.
+
+health_band: enum [green, yellow, red]
+  | Retention health estimate updated from support and success signals.
+
+## Identity
+
+An Account is identified by legal name and domain.
+
+## Notes
+
+Support narrative context often exposes expansion or churn risk before product usage metrics shift.

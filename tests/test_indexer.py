@@ -5,7 +5,7 @@ import pytest
 from lore.models import (
     Ontology, OntologyManifest, Entity, Attribute, Relationship,
     RelationshipFile, Rule, RuleFile, ObservationFile, Observation,
-    View, Taxonomy, TaxonomyNode, Glossary, GlossaryEntry,
+    View, Taxonomy, TaxonomyNode, Glossary, GlossaryEntry, KnowledgeClaim,
 )
 from lore.indexer import (
     generate_root_index, generate_directory_index,
@@ -105,6 +105,26 @@ class TestRootIndex:
         result = generate_root_index(ont, tmp_path, today=date(2025, 6, 1))
         assert "AE" in result
         assert "CSM" in result
+
+    def test_agent_first_sections_present(self, tmp_path):
+        ont = Ontology(
+            manifest=OntologyManifest(name="test", version="1.0"),
+            entities=[Entity(name="Account", attributes=[], notes="Long enough context for agent use.")],
+            observation_files=[ObservationFile(
+                name="Discovery",
+                about="Account",
+                date="2025-05-15",
+                observations=[Observation(
+                    heading="Signal",
+                    prose="Detailed signal text.",
+                    claims=[KnowledgeClaim(kind="fact", text="Client requires SSO")],
+                )],
+            )],
+        )
+        result = generate_root_index(ont, tmp_path, today=date(2025, 6, 1))
+        assert "Agent-First Reading Order" in result
+        assert "Recent Learning Signals" in result
+        assert "claims" in result
 
 
 # ---------------------------------------------------------------------------

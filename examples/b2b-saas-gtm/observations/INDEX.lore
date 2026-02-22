@@ -1,0 +1,28 @@
+---
+index: true
+generated: 2026-02-22
+---
+
+## Overview
+
+Field notes and observations (17 entries across 11 files).
+
+## Contents
+
+- `competitor-pressure-review.lore` — Competitor Pressure Review about Competitor (2026-02-21): 1 observations, 4 claims
+- `contact-champion-shift-review.lore` — Contact Champion Shift Review about Contact (2026-02-21): 1 observations, 4 claims
+- `feature-adoption-patterns.lore` — Feature Adoption Pattern Analysis about Feature (2026-02-21): 4 observations, 16 claims
+- `interaction-sentiment-patterns.lore` — Interaction Sentiment Patterns about Interaction (2026-02-21): 1 observations, 4 claims
+- `opportunity-conversion-patterns.lore` — Opportunity Conversion Patterns about Opportunity (2026-02-21): 1 observations, 4 claims
+- `play-execution-learnings.lore` — Play Execution Learnings about Play (2026-02-21): 1 observations, 4 claims
+- `product-upgrade-friction.lore` — Product Upgrade Friction Review about Product (2026-02-21): 1 observations, 4 claims
+- `q2-account-signals.lore` — Q2 Account Expansion Signals about Account (2026-02-20): 3 observations, 12 claims
+- `signal-quality-review.lore` — Signal Quality Review about Signal (2026-02-20): 2 observations, 8 claims
+- `subscription-renewal-patterns.lore` — Subscription Renewal Patterns about Subscription (2026-02-21): 1 observations, 4 claims
+- `usage-seasonality-context.lore` — Usage Seasonality Context about Usage (2026-02-21): 1 observations, 4 claims
+
+## Search Guide
+
+- To find observations about an entity: `grep -l 'about: EntityName' observations/*.lore`
+- To find recent observations: sort by `date:` field in frontmatter
+- To find semi-structured signals: `grep -R '^(Fact|Belief|Value|Precedent):' observations/`

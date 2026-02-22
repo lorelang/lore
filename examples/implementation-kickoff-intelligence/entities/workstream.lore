@@ -1,0 +1,32 @@
+---
+entity: Workstream
+description: A bounded implementation track with explicit ownership and milestones.
+provenance:
+  author: implementation-ops
+  source: domain-expert
+  confidence: 0.9
+  created: 2026-02-22
+status: stable
+---
+
+## Attributes
+
+name: string [required]
+  | Workstream label.
+
+target_date: date
+  | Planned completion date for this stream.
+
+status: enum [planned, active, blocked, done]
+  | Current execution state.
+
+risk_pattern: enum [none, dependency-slip, resourcing-gap, decision-latency]
+  | Dominant risk pattern seen in synthesis.
+
+## Identity
+
+A Workstream is identified by name and client context.
+
+## Notes
+
+Workstream narrative should preserve why a status changed, not only the latest status.

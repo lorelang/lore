@@ -7,7 +7,14 @@ and other issues. Returns a list of diagnostic messages.
 from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
+import re
 from .models import Ontology
+from .view_scope import (
+    normalize_view_reference,
+    is_entity_placeholder,
+    is_relationship_placeholder,
+    is_rule_placeholder,
+)
 
 
 class Severity(Enum):
@@ -30,6 +37,13 @@ class Diagnostic:
 
 VALID_STATUSES = {"", "draft", "proposed", "stable", "deprecated"}
 VALID_SOURCES = {"", "domain-expert", "ai-generated", "imported", "derived"}
+VALID_RULE_SEVERITIES = {"critical", "warning", "info"}
+VALID_CARDINALITIES = {"one-to-one", "one-to-many", "many-to-one", "many-to-many"}
+VALID_CLAIM_KINDS = {"fact", "belief", "value", "precedent"}
+
+
+def _is_iso_date(date_str: str) -> bool:
+    return bool(re.match(r"^\d{4}-\d{2}-\d{2}$", date_str))
 
 
 def validate(ontology: Ontology) -> list[Diagnostic]:
@@ -114,6 +128,7 @@ def _check_entities(ont: Ontology) -> list[Diagnostic]:
 def _check_relationships(ont: Ontology) -> list[Diagnostic]:
     diags: list[Diagnostic] = []
     entity_names = ont.entity_names
+    all_rel_names = {r.name for r in ont.all_relationships}
 
     for rf in ont.relationship_files:
         src = str(rf.source_file) if rf.source_file else rf.domain
@@ -131,14 +146,49 @@ def _check_relationships(ont: Ontology) -> list[Diagnostic]:
                     f"Relationship '{rel.name}' references unknown entity '{rel.to_entity}'",
                     src,
                 ))
+            if rel.cardinality:
+                card = rel.cardinality.split("[", 1)[0].strip()
+                if card not in VALID_CARDINALITIES:
+                    diags.append(Diagnostic(
+                        Severity.WARNING,
+                        f"Relationship '{rel.name}' has unknown cardinality '{rel.cardinality}'",
+                        src,
+                    ))
 
         # Check traversals reference valid relationships
-        all_rel_names = {r.name for r in ont.all_relationships}
         for trav in rf.traversals:
-            # Extract relationship names from path
-            rel_refs = set(re.findall(r'\[(\w+)\]', trav.path)) if trav.path else set()
-            # Note: some traversal paths use filters like [type = expansion]
-            # so we don't strictly validate those
+            if not trav.path:
+                continue
+
+            # Validate relationship names in traversal path.
+            for token in re.findall(r"\[([^\]]+)\]", trav.path):
+                rel_name = token.strip()
+                if not rel_name or "=" in rel_name:
+                    continue
+                if rel_name not in all_rel_names:
+                    diags.append(Diagnostic(
+                        Severity.WARNING,
+                        f"Traversal '{trav.name}' references unknown relationship '{rel_name}'",
+                        src,
+                    ))
+
+            # Validate entity endpoints in each traversal segment.
+            segment_matches = re.finditer(r"(\w+)\s*-\[[^\]]+\]->\s*(\w+)", trav.path)
+            for m in segment_matches:
+                from_entity = m.group(1)
+                to_entity = m.group(2)
+                if from_entity not in entity_names:
+                    diags.append(Diagnostic(
+                        Severity.WARNING,
+                        f"Traversal '{trav.name}' references unknown entity '{from_entity}'",
+                        src,
+                    ))
+                if to_entity not in entity_names:
+                    diags.append(Diagnostic(
+                        Severity.WARNING,
+                        f"Traversal '{trav.name}' references unknown entity '{to_entity}'",
+                        src,
+                    ))
 
     return diags
 
@@ -169,6 +219,12 @@ def _check_rules(ont: Ontology) -> list[Diagnostic]:
                     f"Rule '{rule.name}' has no applies_to — consider specifying target entity",
                     src,
                 ))
+            if rule.severity and rule.severity not in VALID_RULE_SEVERITIES:
+                diags.append(Diagnostic(
+                    Severity.WARNING,
+                    f"Rule '{rule.name}' has unknown severity '{rule.severity}'",
+                    src,
+                ))
 
     return diags
 
@@ -193,13 +249,22 @@ def _check_taxonomies(ont: Ontology) -> list[Diagnostic]:
 
         # Check applied_to references a valid entity.attribute
         if tax.applied_to and "." in tax.applied_to:
-            entity_name = tax.applied_to.split(".")[0]
+            entity_name, attr_name = tax.applied_to.split(".", 1)
             if entity_name not in ont.entity_names:
                 diags.append(Diagnostic(
                     Severity.WARNING,
                     f"Taxonomy '{tax.name}' applied_to references unknown entity '{entity_name}'",
                     src,
                 ))
+            else:
+                entity = next((e for e in ont.entities if e.name == entity_name), None)
+                attr_names = {a.name for a in entity.attributes} if entity else set()
+                if attr_name and attr_name not in attr_names:
+                    diags.append(Diagnostic(
+                        Severity.WARNING,
+                        f"Taxonomy '{tax.name}' applied_to references unknown attribute '{tax.applied_to}'",
+                        src,
+                    ))
 
     return diags
 
@@ -214,6 +279,9 @@ def _count_nodes(node) -> int:
 def _check_views(ont: Ontology) -> list[Diagnostic]:
     diags: list[Diagnostic] = []
     entity_names = ont.entity_names
+    relationship_names = {r.name for r in ont.all_relationships}
+    traversal_names = {t.name for t in ont.all_traversals}
+    rule_names = {r.name for r in ont.all_rules}
 
     for view in ont.views:
         src = str(view.source_file) if view.source_file else view.name
@@ -227,6 +295,39 @@ def _check_views(ont: Ontology) -> list[Diagnostic]:
                 f"View '{view.name}' has no Key Questions — these help scope the AI agent",
                 src,
             ))
+
+        for entry in view.entities:
+            if is_entity_placeholder(entry):
+                continue
+            entity = normalize_view_reference(entry)
+            if entity and entity not in entity_names:
+                diags.append(Diagnostic(
+                    Severity.WARNING,
+                    f"View '{view.name}' references unknown entity '{entity}'",
+                    src,
+                ))
+
+        for entry in view.relationships:
+            if is_relationship_placeholder(entry, ont):
+                continue
+            symbol = normalize_view_reference(entry)
+            if symbol and symbol not in relationship_names and symbol not in traversal_names:
+                diags.append(Diagnostic(
+                    Severity.WARNING,
+                    f"View '{view.name}' references unknown relationship/traversal '{symbol}'",
+                    src,
+                ))
+
+        for entry in view.rules:
+            if is_rule_placeholder(entry, ont):
+                continue
+            symbol = normalize_view_reference(entry)
+            if symbol and symbol not in rule_names:
+                diags.append(Diagnostic(
+                    Severity.WARNING,
+                    f"View '{view.name}' references unknown rule '{symbol}'",
+                    src,
+                ))
 
     return diags
 
@@ -261,6 +362,12 @@ def _check_provenance(ont: Ontology) -> list[Diagnostic]:
                        str(ont.glossary.source_file) if ont.glossary.source_file else "glossary"))
     for v in ont.views:
         items.append((v.name, "View", v.provenance, v.status, str(v.source_file) if v.source_file else v.name))
+    for of in ont.observation_files:
+        items.append((of.name, "ObservationFile", of.provenance, of.status,
+                      str(of.source_file) if of.source_file else of.name))
+    for of in ont.outcome_files:
+        items.append((of.name, "OutcomeFile", of.provenance, of.status,
+                      str(of.source_file) if of.source_file else of.name))
 
     # Track deprecated entities for reference checking
     deprecated_entities = set()
@@ -293,6 +400,28 @@ def _check_provenance(ont: Ontology) -> list[Diagnostic]:
                 diags.append(Diagnostic(
                     Severity.INFO,
                     f"{kind} '{name}' has non-standard provenance source '{prov.source}'",
+                    src,
+                ))
+
+            # Validate provenance dates
+            if prov.created and not _is_iso_date(prov.created):
+                diags.append(Diagnostic(
+                    Severity.WARNING,
+                    f"{kind} '{name}' has invalid provenance.created date '{prov.created}' "
+                    f"(expected YYYY-MM-DD)",
+                    src,
+                ))
+            if prov.deprecated and not _is_iso_date(prov.deprecated):
+                diags.append(Diagnostic(
+                    Severity.WARNING,
+                    f"{kind} '{name}' has invalid provenance.deprecated date '{prov.deprecated}' "
+                    f"(expected YYYY-MM-DD)",
+                    src,
+                ))
+            if status == "deprecated" and prov and not prov.deprecated:
+                diags.append(Diagnostic(
+                    Severity.INFO,
+                    f"{kind} '{name}' is deprecated but missing provenance.deprecated date",
                     src,
                 ))
 
@@ -343,6 +472,22 @@ def _check_observations(ont: Ontology) -> list[Diagnostic]:
                 src,
             ))
 
+        if of.date and not _is_iso_date(of.date):
+            diags.append(Diagnostic(
+                Severity.WARNING,
+                f"Observation '{of.name}' has invalid date '{of.date}' (expected YYYY-MM-DD)",
+                src,
+            ))
+
+        for obs in of.observations:
+            for claim in obs.claims:
+                if claim.kind not in VALID_CLAIM_KINDS:
+                    diags.append(Diagnostic(
+                        Severity.WARNING,
+                        f"Observation '{of.name}' has unknown claim kind '{claim.kind}'",
+                        src,
+                    ))
+
     return diags
 
 
@@ -356,6 +501,13 @@ def _check_outcomes(ont: Ontology) -> list[Diagnostic]:
             diags.append(Diagnostic(
                 Severity.WARNING,
                 f"Outcome file '{of.name}' has no outcome sections",
+                src,
+            ))
+
+        if of.date and not _is_iso_date(of.date):
+            diags.append(Diagnostic(
+                Severity.WARNING,
+                f"Outcome '{of.name}' has invalid date '{of.date}' (expected YYYY-MM-DD)",
                 src,
             ))
 
@@ -377,7 +529,3 @@ def _check_outcomes(ont: Ontology) -> list[Diagnostic]:
                         ))
 
     return diags
-
-
-# Need re for traversal parsing
-import re

@@ -1,0 +1,32 @@
+---
+observations: Week 1 Discovery Notes
+about: Client
+observed_by: discovery-agent
+date: 2026-02-19
+confidence: 0.78
+status: proposed
+provenance:
+  author: discovery-agent
+  source: ai-generated
+  confidence: 0.78
+  created: 2026-02-19
+---
+
+## Northwind security process is a rollout gate
+
+Northwind's technical buyer repeatedly deferred timeline commitments until legal
+and security review templates were provided.
+
+Fact: Northwind requires SOC2 Type II evidence before pilot start.
+Belief: Security review is a procurement precondition, not a technical concern.
+Value: They optimize for auditability over speed.
+Precedent: Similar enterprise clients delayed 4-6 weeks when legal artifacts were late.
+
+## Brightwell has latent expansion intent
+
+Brightwell started with one team but asked about cross-department seat transfer,
+audit logs, and SSO administration in the first call.
+
+Fact: Brightwell requested enterprise-only feature walk-through in first meeting.
+Belief: Economic buyer is validating org-wide rollout, not team-only usage.
+Precedent: Early SSO + audit-log interest has correlated with >2x expansion in prior pilots.

@@ -1,0 +1,30 @@
+---
+entity: Stakeholder
+description: A person with influence over pilot adoption or commercial decisions.
+provenance:
+  author: founder-office
+  source: domain-expert
+  confidence: 0.9
+  created: 2026-02-20
+status: stable
+---
+
+## Attributes
+
+full_name: string [required]
+  | Person name used in meeting notes.
+
+role: enum [economic-buyer, technical-buyer, champion, blocker, evaluator]
+  | Functional role in buying process.
+
+risk_posture: enum [conservative, pragmatic, experimental]
+  | How quickly this stakeholder adopts new workflows.
+
+## Identity
+
+Stakeholders are resolved by full name plus client context.
+
+## Notes
+
+The same person may shift from evaluator to champion after pilot success.
+Capturing role transitions in observations is often more useful than static CRM fields.

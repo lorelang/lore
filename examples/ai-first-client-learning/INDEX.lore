@@ -1,0 +1,63 @@
+---
+index: true
+generated: 2026-02-22
+---
+
+## Overview
+
+This is the **ai-first-client-learning** ontology (v0.2.0).
+AI-first ontology for distilling client meeting learnings into reusable domain knowledge for agent workflows.
+
+## Stats
+
+- 3 entities, 3 relationships, 2 rules
+- 1 taxonomies, 3 glossary terms
+- 2 observations, 7 claims, 2 outcomes
+- 1 views
+
+## Directory Map
+
+- `entities/` — Domain concepts — the nouns of this ontology (4 files)
+- `relationships/` — How entities connect — the verbs (2 files)
+- `rules/` — Business logic, scoring, and alert conditions (2 files)
+- `taxonomies/` — Classification hierarchies and type trees (2 files)
+- `glossary/` — Canonical term definitions — use these meanings (2 files)
+- `views/` — Team-scoped perspectives (filtered ontology slices) (2 files)
+- `observations/` — Field notes from AI agents and domain experts (2 files)
+- `outcomes/` — Retrospectives — what actually happened (2 files)
+
+## Entities
+
+- **Client** (5 attrs) — A target customer organization in discovery or pilot.
+- **Engagement** (4 attrs) — A meeting, call, workshop, or async interaction with the client.
+- **Stakeholder** (3 attrs) — A person with influence over pilot adoption or commercial decisions.
+
+## Agent-First Reading Order
+
+For AI context engineering, read in this order:
+1. `observations/` and `outcomes/` for latest unstructured domain learning
+2. `entities/` notes and lifecycle sections for semantic grounding
+3. `rules/` and `relationships/` for constraint and traversal guardrails
+4. `taxonomies/` and `glossary/` for normalization and canonical terms
+
+## Recent Learning Signals
+
+Recent observations:
+- 2026-02-19 — Week 1 Discovery Notes about Client (7 claims)
+
+Recent outcomes:
+- 2026-02-22 — February Pilot Retrospective (4 takeaways)
+
+## Search Guide
+
+When an AI agent needs to find information in this ontology:
+
+- **What is X?** → Look in `entities/` for the entity definition, `glossary/` for term definitions
+- **How does X relate to Y?** → Look in `relationships/` for connections
+- **What rules apply to X?** → Look in `rules/` and check `applies_to` fields
+- **What happened with X?** → Look in `observations/` for field notes, `outcomes/` for retrospectives
+- **What types/categories exist?** → Look in `taxonomies/`
+- **What does this term mean?** → Look in `glossary/`
+- **Team-specific context?** → Look in `views/` (available: Founder Learning Loop)
+
+For full compiled context, run: `lore compile . -t agent`

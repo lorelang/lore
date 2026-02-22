@@ -1,0 +1,33 @@
+---
+entity: Integration
+description: A required system connection needed for successful onboarding.
+provenance:
+  author: implementation-ops
+  source: domain-expert
+  confidence: 0.89
+  created: 2026-02-22
+status: stable
+---
+
+## Attributes
+
+system_name: string [required]
+  | Product or platform name to integrate with.
+
+system_type: enum [crm, data-warehouse, identity, ticketing, billing]
+  | Integration category.
+
+readiness: enum [unknown, blocked, in-progress, validated]
+  | Current state of integration readiness.
+
+estimated_effort_days: int [0 .. 120]
+  | Delivery effort estimate used for staffing and risk evaluation.
+
+## Identity
+
+An Integration is identified by system_name and client context.
+
+## Notes
+
+Integration readiness is often inferred from unstructured workshop discussion
+before formal requirements are finalized.

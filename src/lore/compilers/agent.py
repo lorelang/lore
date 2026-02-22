@@ -7,8 +7,10 @@ what makes the agent "ontology-aware" — it can reason about entities,
 relationships, rules, and glossary terms because they're in its context.
 """
 from __future__ import annotations
+import re
 from ..models import Ontology, View, TaxonomyNode
 from typing import Optional
+from ..view_scope import resolve_view_scope
 
 
 def compile_agent_context(ontology: Ontology, view_name: Optional[str] = None) -> str:
@@ -30,6 +32,13 @@ def compile_agent_context(ontology: Ontology, view_name: Optional[str] = None) -
                 view = v
                 break
 
+    scope = resolve_view_scope(ontology, view) if view else None
+    in_scope_entities = (
+        set(scope.entity_names)
+        if scope
+        else {e.name for e in ontology.entities}
+    )
+
     lines.append(f"<domain_ontology>")
     lines.append(f"<overview>")
     lines.append(f"Domain: {name}")
@@ -40,14 +49,23 @@ def compile_agent_context(ontology: Ontology, view_name: Optional[str] = None) -
         lines.append(f"Audience: {view.audience}")
         if view.description:
             lines.append(f"View purpose: {view.description}")
+    lines.append("Interpretation mode: unstructured-first")
     lines.append(f"</overview>")
+    lines.append("")
+
+    lines.append("<agent_guidance>")
+    lines.append("Treat this ontology as narrative domain knowledge first, schema second.")
+    lines.append("Prioritize prose sections (notes, lifecycle, observations, outcomes) when reasoning.")
+    lines.append("Use structured fields (types, constraints, traversals) as guardrails, not as the sole truth source.")
+    lines.append("When claims conflict, weigh recency, confidence, and precedents before deciding.")
+    lines.append("</agent_guidance>")
     lines.append("")
 
     # Entities
     lines.append("<entities>")
     for entity in ontology.entities:
         # If view is specified, check if entity is in scope
-        if view and not _entity_in_view(entity.name, view):
+        if view and entity.name not in in_scope_entities:
             continue
 
         lines.append(f"<entity name=\"{entity.name}\">")
@@ -75,6 +93,8 @@ def compile_agent_context(ontology: Ontology, view_name: Optional[str] = None) -
             lines.append("  Attributes:")
             for attr in entity.attributes:
                 type_str = attr.type
+                if attr.type == "enum" and attr.enum_values:
+                    type_str = f"enum [{', '.join(attr.enum_values)}]"
                 if attr.reference_to:
                     type_str = f"reference to {attr.reference_to}"
                 constraint_str = f" [{', '.join(attr.constraints)}]" if attr.constraints else ""
@@ -103,11 +123,18 @@ def compile_agent_context(ontology: Ontology, view_name: Optional[str] = None) -
 
     # Relationships
     lines.append("<relationships>")
+    relationship_scope = scope.relationship_names if scope else None
+    traversal_scope = scope.traversal_names if scope else None
+
     for rel in ontology.all_relationships:
-        if view and rel.name not in view.relationships and \
-                not any(rel.name in r for r in view.relationships):
-            # Still include if not explicitly filtered (views often use partial lists)
-            pass
+        if view:
+            if relationship_scope is not None:
+                if rel.name not in relationship_scope:
+                    continue
+            elif in_scope_entities:
+                if rel.from_entity not in in_scope_entities and rel.to_entity not in in_scope_entities:
+                    continue
+
         lines.append(
             f"  {rel.from_entity} -[{rel.name}]-> {rel.to_entity} "
             f"({rel.cardinality})"
@@ -125,6 +152,23 @@ def compile_agent_context(ontology: Ontology, view_name: Optional[str] = None) -
     lines.append("These are valid multi-hop reasoning paths in this domain:")
     lines.append("")
     for trav in ontology.all_traversals:
+        if view:
+            include = True
+            if traversal_scope is not None:
+                include = trav.name in traversal_scope
+                if not include and relationship_scope is not None:
+                    rel_refs = set(re.findall(r"\[([^\]]+)\]", trav.path))
+                    rel_tokens = {r.strip() for r in rel_refs if "=" not in r}
+                    include = bool(rel_tokens & relationship_scope)
+            elif relationship_scope is not None:
+                rel_refs = set(re.findall(r"\[([^\]]+)\]", trav.path))
+                rel_tokens = {r.strip() for r in rel_refs if "=" not in r}
+                include = bool(rel_tokens & relationship_scope)
+            elif in_scope_entities:
+                include = any(entity in trav.path for entity in in_scope_entities)
+
+            if not include:
+                continue
         lines.append(f"  {trav.name}:")
         lines.append(f"    Path: {trav.path}")
         if trav.description:
@@ -135,10 +179,15 @@ def compile_agent_context(ontology: Ontology, view_name: Optional[str] = None) -
 
     # Rules
     lines.append("<rules>")
+    rule_scope = scope.rule_names if scope else None
+
     for rule in ontology.all_rules:
-        if view and rule.name not in view.rules and \
-                not any(rule.name in r for r in view.rules):
-            pass
+        if view:
+            if rule_scope is not None:
+                if rule.name not in rule_scope:
+                    continue
+            elif rule.applies_to and in_scope_entities and rule.applies_to not in in_scope_entities:
+                continue
 
         lines.append(f"<rule name=\"{rule.name}\">")
         if rule.applies_to:
@@ -195,6 +244,8 @@ def compile_agent_context(ontology: Ontology, view_name: Optional[str] = None) -
         lines.append("Field notes from AI agents and domain experts:")
         lines.append("")
         for of in ontology.observation_files:
+            if view and of.about and of.about not in in_scope_entities:
+                continue
             meta_parts = []
             if of.observed_by:
                 meta_parts.append(f"by {of.observed_by}")
@@ -206,15 +257,25 @@ def compile_agent_context(ontology: Ontology, view_name: Optional[str] = None) -
                 meta_parts.append(f"about {of.about}")
             meta = f" ({', '.join(meta_parts)})" if meta_parts else ""
             for obs in of.observations:
-                obs_key = (of.about, obs.heading)
+                source_key = str(of.source_file) if of.source_file else of.name
+                obs_key = (of.about, source_key, obs.heading)
                 if obs_key in conflicting_obs:
                     lines.append(f"  <observation conflict=\"true\">{obs.heading}{meta}")
                     lines.append(f"    {obs.prose}")
-                    lines.append(f"    [CONFLICT: This observation contradicts: {conflicting_obs[obs_key]}]")
+                    if obs.claims:
+                        lines.append("    Claims:")
+                        for claim in obs.claims:
+                            lines.append(f"      - {claim.kind}: {claim.text}")
+                    for contradiction in conflicting_obs[obs_key]:
+                        lines.append(f"    [CONFLICT: {contradiction}]")
                     lines.append(f"  </observation>")
                 else:
                     lines.append(f"  <observation>{obs.heading}{meta}")
                     lines.append(f"    {obs.prose}")
+                    if obs.claims:
+                        lines.append("    Claims:")
+                        for claim in obs.claims:
+                            lines.append(f"      - {claim.kind}: {claim.text}")
                     lines.append(f"  </observation>")
                 lines.append("")
         lines.append("</observations>")
@@ -257,12 +318,12 @@ def compile_agent_context(ontology: Ontology, view_name: Optional[str] = None) -
     return "\n".join(lines)
 
 
-def _detect_observation_conflicts(ontology: Ontology) -> dict[tuple[str, str], str]:
+def _detect_observation_conflicts(ontology: Ontology) -> dict[tuple[str, str, str], list[str]]:
     """
     Detect contradicting observations about the same entity.
 
-    Returns a dict mapping (entity, heading) -> conflicting heading string
-    for observations that contain opposing signal keywords.
+    Returns a dict mapping (about, source_key, heading) to a list of
+    contradiction descriptions.
     """
     _POSITIVE = {
         "expansion", "growth", "increase", "uptick", "readiness",
@@ -276,42 +337,65 @@ def _detect_observation_conflicts(ontology: Ontology) -> dict[tuple[str, str], s
     }
 
     # Group observations by entity
-    obs_by_entity: dict[str, list[tuple[str, str]]] = {}  # entity -> [(heading, text)]
+    obs_by_entity: dict[str, list[dict]] = {}
     for of in ontology.observation_files:
         if of.about:
             for obs in of.observations:
-                obs_by_entity.setdefault(of.about, []).append(
-                    (obs.heading, (obs.heading + " " + obs.prose).lower())
-                )
+                source_key = str(of.source_file) if of.source_file else of.name
+                obs_by_entity.setdefault(of.about, []).append({
+                    "about": of.about,
+                    "heading": obs.heading,
+                    "text": (obs.heading + " " + obs.prose).lower(),
+                    "source_key": source_key,
+                    "observed_by": of.observed_by,
+                    "date": of.date,
+                    "confidence": of.confidence,
+                })
 
-    conflicts: dict[tuple[str, str], str] = {}
+    conflicts: dict[tuple[str, str, str], list[str]] = {}
     for entity, obs_list in obs_by_entity.items():
         if len(obs_list) < 2:
             continue
         for i in range(len(obs_list)):
             for j in range(i + 1, len(obs_list)):
-                h1, text1 = obs_list[i]
-                h2, text2 = obs_list[j]
+                o1 = obs_list[i]
+                o2 = obs_list[j]
+                text1 = o1["text"]
+                text2 = o2["text"]
                 pos1 = any(s in text1 for s in _POSITIVE)
                 neg1 = any(s in text1 for s in _NEGATIVE)
                 pos2 = any(s in text2 for s in _POSITIVE)
                 neg2 = any(s in text2 for s in _NEGATIVE)
                 if (pos1 and not neg1 and neg2 and not pos2) or \
                    (neg1 and not pos1 and pos2 and not neg2):
-                    conflicts[(entity, h1)] = h2
-                    conflicts[(entity, h2)] = h1
+                    k1 = (entity, o1["source_key"], o1["heading"])
+                    k2 = (entity, o2["source_key"], o2["heading"])
+
+                    details_1 = (
+                        f"This observation conflicts with '{o2['heading']}' "
+                        f"({_render_observation_meta(o2)}). "
+                        "Consider recency and confidence before acting."
+                    )
+                    details_2 = (
+                        f"This observation conflicts with '{o1['heading']}' "
+                        f"({_render_observation_meta(o1)}). "
+                        "Consider recency and confidence before acting."
+                    )
+                    conflicts.setdefault(k1, []).append(details_1)
+                    conflicts.setdefault(k2, []).append(details_2)
 
     return conflicts
 
 
-def _entity_in_view(entity_name: str, view: View) -> bool:
-    """Check if an entity is referenced in a view."""
-    if not view.entities:
-        return True  # No filter = include all
-    for entry in view.entities:
-        if entity_name in entry:
-            return True
-    return False
+def _render_observation_meta(record: dict) -> str:
+    parts = []
+    if record.get("observed_by"):
+        parts.append(f"by {record['observed_by']}")
+    if record.get("date"):
+        parts.append(f"on {record['date']}")
+    if record.get("confidence") is not None:
+        parts.append(f"confidence={record['confidence']}")
+    return ", ".join(parts) if parts else "no metadata"
 
 
 def _render_taxonomy_text(node: TaxonomyNode, lines: list[str], indent: int = 0):

@@ -1,0 +1,15 @@
+---
+taxonomy: KickoffRiskPattern
+applied_to: Workstream.risk_pattern
+description: Categories for recurring onboarding risk signals extracted from meetings.
+---
+
+Risk Pattern
+├── Decision Latency      @tag: stakeholder
+├── Dependency Slip       @tag: technical
+└── Resourcing Gap        @tag: capacity
+
+## Inheritance Rules
+
+If a workstream is tagged Dependency Slip and references unknown integration effort,
+it should also inherit Resourcing Gap until ownership is explicit.

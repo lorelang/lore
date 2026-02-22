@@ -1,0 +1,29 @@
+---
+entity: IssueTheme
+description: A recurring category of customer friction extracted from support narrative.
+provenance:
+  author: support-ops
+  source: domain-expert
+  confidence: 0.89
+  created: 2026-02-22
+status: stable
+---
+
+## Attributes
+
+theme_name: string [required, unique]
+  | Canonical theme label.
+
+category: enum [product-gap, onboarding-friction, performance, integration, billing]
+  | Theme category for routing and prioritization.
+
+recurrence_score: float [0.0 .. 1.0]
+  | Relative frequency and consistency of this theme across accounts.
+
+## Identity
+
+An IssueTheme is identified by theme_name.
+
+## Notes
+
+Themes should remain semi-structured so agent synthesis can evolve labels as language changes.

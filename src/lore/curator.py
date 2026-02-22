@@ -86,6 +86,13 @@ def _days_old(created: str, today: Optional[date] = None) -> Optional[int]:
     return (ref - d).days
 
 
+def _text_size(text: str) -> int:
+    """Length of text after whitespace normalization."""
+    if not text:
+        return 0
+    return len(re.sub(r"\s+", " ", text).strip())
+
+
 # ---------------------------------------------------------------------------
 # Job 1: Staleness
 # ---------------------------------------------------------------------------
@@ -209,6 +216,13 @@ def curate_coverage(ontology: Ontology) -> CurationReport:
                             "Add a ## Notes section with domain knowledge, edge cases, "
                             "and guidance for AI interpretation."),
             ))
+        elif _text_size(entity.notes) < 80:
+            report.findings.append(CurationFinding(
+                job="coverage", severity="info",
+                message=f"Entity '{entity.name}' has thin narrative context for agent reasoning",
+                source=str(entity.source_file) if entity.source_file else "",
+                suggestion="Expand Notes with domain nuance, exceptions, and decision boundaries.",
+            ))
 
     # Entities without Identity
     for entity in ontology.entities:
@@ -261,10 +275,27 @@ def curate_coverage(ontology: Ontology) -> CurationReport:
                 suggestion="No agent has recorded field notes about this entity yet.",
             ))
 
-    # Traversals — check if all entities in path exist
-    for trav in ontology.all_traversals:
-        for entity_name in ontology.entity_names:
-            pass  # traversal paths are free-form strings, skip deep validation
+    # Observation quality for AI-first workflows.
+    for of in ontology.observation_files:
+        file_claims = sum(len(obs.claims) for obs in of.observations)
+        if of.observations and file_claims == 0:
+            report.findings.append(CurationFinding(
+                job="coverage", severity="info",
+                message=f"Observation '{of.name}' has no semi-structured claims",
+                source=str(of.source_file) if of.source_file else "",
+                suggestion=("Add optional Fact/Belief/Value/Precedent lines so meeting "
+                            "insights become retrievable ontology signals."),
+            ))
+
+        for obs in of.observations:
+            if _text_size(obs.prose) < 40 and not obs.claims:
+                report.findings.append(CurationFinding(
+                    job="coverage", severity="warning",
+                    message=(f"Observation '{obs.heading}' has very little narrative "
+                             f"signal and no claims"),
+                    source=str(of.source_file) if of.source_file else "",
+                    suggestion="Expand prose or add claim markers for downstream agent use.",
+                ))
 
     # Coverage score
     total_entities = len(ontology.entities)
@@ -282,6 +313,13 @@ def curate_coverage(ontology: Ontology) -> CurationReport:
                           f"{entities_with_notes}/{total_entities} have Notes, "
                           f"{entities_with_identity}/{total_entities} have Identity, "
                           f"{entities_connected}/{total_entities} connected")
+
+        total_observations = len(ontology.all_observations)
+        if total_observations:
+            observations_with_claims = sum(1 for obs in ontology.all_observations if obs.claims)
+            report.summary += (
+                f", {observations_with_claims}/{total_observations} observations carry claims"
+            )
     else:
         report.summary = "No entities to check"
 
@@ -349,6 +387,20 @@ def curate_consistency(ontology: Ontology) -> CurationReport:
     # Build a map of observation refs → outcomes
     for of in ontology.outcome_files:
         for outcome in of.outcomes:
+            if not outcome.takeaways:
+                report.findings.append(CurationFinding(
+                    job="consistency", severity="info",
+                    message=(f"Outcome '{outcome.heading}' has no Takeaway markers; "
+                             f"self-improvement loop has no explicit learning signal"),
+                    suggestion="Add at least one `Takeaway:` line for ontology evolution.",
+                ))
+            if not outcome.refs:
+                report.findings.append(CurationFinding(
+                    job="consistency", severity="info",
+                    message=(f"Outcome '{outcome.heading}' has no observation references"),
+                    suggestion="Add `Ref:` markers to tie outcomes back to source observations.",
+                ))
+
             heading_lower = outcome.heading.lower()
             is_wrong = any(word in heading_lower for word in
                           ["false positive", "incorrect", "wrong", "missed", "failed"])
@@ -384,14 +436,16 @@ def curate_consistency(ontology: Ontology) -> CurationReport:
     }
 
     # Group observations by entity
-    obs_by_entity: dict[str, list[tuple[str, str, str]]] = {}  # entity -> [(heading, prose, file)]
+    obs_by_entity: dict[str, list[tuple[str, str, str]]] = {}  # entity -> [(heading, text, file)]
     for of in ontology.observation_files:
         if of.about:
             entity_key = of.about
             file_name = str(of.source_file) if of.source_file else of.name
             for obs in of.observations:
+                claims_text = " ".join(c.text for c in obs.claims)
+                combined = f"{obs.prose} {claims_text}".strip()
                 obs_by_entity.setdefault(entity_key, []).append(
-                    (obs.heading, obs.prose, file_name)
+                    (obs.heading, combined, file_name)
                 )
 
     for entity_key, obs_list in obs_by_entity.items():

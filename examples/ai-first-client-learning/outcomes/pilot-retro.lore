@@ -1,0 +1,31 @@
+---
+outcomes: February Pilot Retrospective
+reviewed_by: founder-ops
+date: 2026-02-22
+provenance:
+  author: founder-ops
+  source: domain-expert
+  confidence: 0.86
+  created: 2026-02-22
+status: proposed
+---
+
+## Northwind delay risk prediction — correct
+
+Northwind delayed pilot kickoff by 23 days due to security questionnaire processing.
+Early warning in discovery notes was directionally correct.
+
+Takeaway: add a security-readiness checklist to onboarding playbooks for enterprise clients
+Takeaway: convert security precedent signals into a reusable rule template
+
+Ref: observations/discovery-call-week1.lore#northwind-security-process-is-a-rollout-gate
+
+## Brightwell expansion intent prediction — partially correct
+
+Brightwell expanded from 1 to 2 teams, but economic buyer approval took longer
+than expected due to budget cycle constraints.
+
+Takeaway: expansion-intent beliefs should be separated from timeline-confidence beliefs
+Takeaway: add budget-cycle context as an explicit Client attribute candidate
+
+Ref: observations/discovery-call-week1.lore#brightwell-has-latent-expansion-intent

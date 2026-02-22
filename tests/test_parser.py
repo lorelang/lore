@@ -94,7 +94,8 @@ class TestParseAttributes:
         text = "stage: enum [prospect, active, churned]"
         attrs = _parse_attributes(text)
         assert len(attrs) == 1
-        assert attrs[0].type.startswith("enum")
+        assert attrs[0].type == "enum"
+        assert attrs[0].enum_values == ["prospect", "active", "churned"]
 
     def test_description_lines(self):
         text = "name: string [required]\n  | Legal entity name.\n  | Used for display."
@@ -215,6 +216,28 @@ class TestParseRelationships:
         owns = next(r for r in example_ontology.all_relationships if r.name == "OWNS")
         assert len(owns.properties) >= 1
 
+    def test_relationship_property_description(self, tmp_ontology):
+        ont = tmp_ontology(
+            manifest="name: test\nversion: 0.1.0",
+            entities={
+                "a.lore": "---\nentity: A\n---\n## Attributes\nid: string",
+                "b.lore": "---\nentity: B\n---\n## Attributes\nid: string",
+            },
+            relationships={"rels.lore": """---
+domain: Core
+---
+## LINKS
+  from: A -> to: B
+  cardinality: one-to-many
+  properties:
+    since: date
+      | Date when link became active.
+"""}
+        )
+        rel = ont.all_relationships[0]
+        assert rel.properties[0].name == "since"
+        assert "link became active" in rel.properties[0].description
+
     def test_traversal_count(self, example_ontology):
         assert len(example_ontology.all_traversals) >= 7
 
@@ -304,11 +327,25 @@ class TestParseGlossary:
     def test_glossary_entries(self, example_ontology):
         assert example_ontology.glossary is not None
         entries = example_ontology.all_glossary_entries
-        assert len(entries) >= 11
+        assert len(entries) >= 20
 
     def test_glossary_entry_content(self, example_ontology):
         arr = next(e for e in example_ontology.all_glossary_entries if "ARR" in e.term)
         assert "recurring revenue" in arr.definition.lower()
+
+    def test_merges_multiple_glossary_files(self, tmp_ontology):
+        ont = tmp_ontology(
+            manifest="name: test\nversion: 0.1.0",
+            glossary={
+                "a.lore": "---\ndescription: A terms\n---\n## Alpha\nFirst",
+                "b.lore": "---\ndescription: B terms\n---\n## Beta\nSecond",
+            },
+        )
+        assert ont.glossary is not None
+        terms = {e.term for e in ont.all_glossary_entries}
+        assert terms == {"Alpha", "Beta"}
+        assert "A terms" in ont.glossary.description
+        assert "B terms" in ont.glossary.description
 
 
 # --- View parsing ---

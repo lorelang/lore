@@ -1,0 +1,75 @@
+---
+index: true
+generated: 2026-02-22
+---
+
+## Overview
+
+This is the **b2b-saas-gtm** ontology (v0.2.0).
+Domain ontology for a B2B SaaS company's go-to-market operations. Models accounts, contacts, subscriptions, product usage, and engagement signals to power an AI agent that identifies revenue expansion opportunities, predicts churn risk, and recommends GTM plays.
+
+## Stats
+
+- 11 entities, 18 relationships, 16 rules
+- 2 taxonomies, 23 glossary terms
+- 17 observations, 68 claims, 3 outcomes
+- 3 views
+
+## Directory Map
+
+- `entities/` — Domain concepts — the nouns of this ontology (12 files)
+- `relationships/` — How entities connect — the verbs (4 files)
+- `rules/` — Business logic, scoring, and alert conditions (4 files)
+- `taxonomies/` — Classification hierarchies and type trees (3 files)
+- `glossary/` — Canonical term definitions — use these meanings (3 files)
+- `views/` — Team-scoped perspectives (filtered ontology slices) (4 files)
+- `observations/` — Field notes from AI agents and domain experts (12 files)
+- `outcomes/` — Retrospectives — what actually happened (2 files)
+
+## Entities
+
+- **Account** (14 attrs) — A company that is a customer, prospect, or former customer. Accounts are the pri
+- **Competitor** (9 attrs) — A competing product or vendor that appears in our deal cycles and churn events. 
+- **Contact** (10 attrs) — A person associated with an account. Can be an external stakeholder (customer) o
+- **Feature** (8 attrs) — A distinct capability within the platform that can be independently tracked for 
+- **Interaction** (8 attrs) — Any engagement touchpoint between us and an account's contacts. Interactions are
+- **Opportunity** (11 attrs) — A potential revenue event — new business, expansion, or renewal. Opportunities t
+- **Play** (7 attrs) — A recommended GTM action in response to a signal or account state. Plays bridge 
+- **Product** (12 attrs) — A product or plan that we sell. Products are the units of our catalog — accounts
+- **Signal** (7 attrs) — A detected event or pattern that indicates a change in account trajectory — eith
+- **Subscription** (11 attrs) — An active or historical contract between us and an account. Subscriptions are th
+- **Usage** (9 attrs) — Aggregated product usage metrics for an account over a time period. Usage is the
+
+## Agent-First Reading Order
+
+For AI context engineering, read in this order:
+1. `observations/` and `outcomes/` for latest unstructured domain learning
+2. `entities/` notes and lifecycle sections for semantic grounding
+3. `rules/` and `relationships/` for constraint and traversal guardrails
+4. `taxonomies/` and `glossary/` for normalization and canonical terms
+
+## Recent Learning Signals
+
+Recent observations:
+- 2026-02-21 — Competitor Pressure Review about Competitor (4 claims)
+- 2026-02-21 — Contact Champion Shift Review about Contact (4 claims)
+- 2026-02-21 — Feature Adoption Pattern Analysis about Feature (16 claims)
+- 2026-02-21 — Interaction Sentiment Patterns about Interaction (4 claims)
+- 2026-02-21 — Opportunity Conversion Patterns about Opportunity (4 claims)
+
+Recent outcomes:
+- 2025-07-01 — Q2 2025 Retrospective (6 takeaways)
+
+## Search Guide
+
+When an AI agent needs to find information in this ontology:
+
+- **What is X?** → Look in `entities/` for the entity definition, `glossary/` for term definitions
+- **How does X relate to Y?** → Look in `relationships/` for connections
+- **What rules apply to X?** → Look in `rules/` and check `applies_to` fields
+- **What happened with X?** → Look in `observations/` for field notes, `outcomes/` for retrospectives
+- **What types/categories exist?** → Look in `taxonomies/`
+- **What does this term mean?** → Look in `glossary/`
+- **Team-specific context?** → Look in `views/` (available: Account Executive, Customer Success Manager, RevOps)
+
+For full compiled context, run: `lore compile . -t agent`

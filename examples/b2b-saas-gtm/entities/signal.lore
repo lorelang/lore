@@ -5,6 +5,12 @@ description: >
   account trajectory — either toward expansion or toward
   churn. Signals are the AI agent's primary input for
   generating recommendations.
+provenance:
+  author: revops-team
+  source: domain-expert
+  confidence: 0.9
+  created: 2026-02-22
+status: stable
 ---
 
 ## Attributes
@@ -34,6 +40,11 @@ status: enum [new, acknowledged, actioned, dismissed]
 recommended_play: string [optional]
   | The GTM play the agent recommends based on this signal.
   | References a playbook entry.
+
+## Identity
+
+A Signal is identified by detected_at, type, and source_data fingerprint
+within an account context.
 
 ## Notes
 

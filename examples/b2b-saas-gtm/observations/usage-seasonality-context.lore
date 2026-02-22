@@ -1,0 +1,23 @@
+---
+observations: Usage Seasonality Context
+about: Usage
+observed_by: usage-pattern-agent
+date: 2026-02-21
+confidence: 0.67
+status: proposed
+provenance:
+  author: usage-pattern-agent
+  source: ai-generated
+  confidence: 0.67
+  created: 2026-02-21
+---
+
+## Industry-normalized baselines reduce noisy decline alerts
+
+Usage decline interpreted against segment and seasonal baseline produced cleaner
+risk classification than absolute thresholding.
+
+Fact: Baseline-normalized usage comparisons reduced false-positive decline alerts in cyclical industries.
+Belief: Usage trend models should include industry and fiscal context by default.
+Value: Alert precision is more valuable than high alert volume for GTM operations.
+Precedent: Prior quarter recalibration improved decline signal reliability across enterprise segments.

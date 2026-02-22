@@ -2,14 +2,14 @@
 observations: Feature Adoption Pattern Analysis
 about: Feature
 observed_by: adoption-analysis-agent
-date: 2025-06-25
-confidence: 0.85
+date: 2026-02-21
+confidence: 0.74
 status: proposed
 provenance:
   author: adoption-analysis-agent
   source: ai-generated
-  confidence: 0.85
-  created: 2025-06-25
+  confidence: 0.74
+  created: 2026-02-21
 ---
 
 ## Workflow automation is the Professional stickiness inflection
@@ -27,6 +27,11 @@ first tend to build brittle workflows and churn at month 6.
 Recommendation: the agent should track Feature adoption sequence,
 not just adoption count. Skipped prerequisites are a risk signal.
 
+Fact: Accounts following dashboard to reporting to custom-fields to automation show materially higher retention.
+Belief: Missing intermediate adoption steps indicates implementation fragility.
+Value: Adoption quality matters more than raw feature-count metrics.
+Precedent: Skipped-prerequisite patterns have repeatedly appeared before month-6 churn.
+
 ## API access adoption predicts Enterprise readiness
 
 Accounts on Professional that adopt api-access within their
@@ -41,6 +46,11 @@ account, it should create an Enterprise upgrade signal AND
 a Data Export recommendation simultaneously. These almost
 always travel together.
 
+Fact: Professional accounts adopting API access within six months upgrade at about three times baseline rates.
+Belief: API depth plus rate-limit pressure is a reliable Enterprise readiness bundle.
+Value: GTM should pair Enterprise upgrade and Data Export recommendations when integration depth is high.
+Precedent: Prior enterprise migrations showed API demand and export requirements emerging together.
+
 ## Advanced Analytics has an adoption cliff at 2 weeks
 
 Of accounts that trial the Analytics add-on, 60% convert if
@@ -52,6 +62,11 @@ Recommendation: when an Analytics trial starts, the agent
 should prompt the CSM to schedule a dashboard-building session
 within the first week. Don't wait for the customer to figure
 it out on their own.
+
+Fact: Conversion from Analytics trial drops sharply when no custom dashboard exists by week two.
+Belief: Time-to-first-custom-dashboard is the primary adoption gating signal.
+Value: Guided activation should be prioritized over passive trial exposure.
+Precedent: Early dashboard workshops have repeatedly increased add-on conversion rates.
 
 ## SSO requests are the most reliable Enterprise signal
 
@@ -68,3 +83,8 @@ that only Enterprise provides.
 The agent should treat any mention of "SSO", "SAML", "single
 sign-on", or "security review" in support tickets or meetings
 as a strong, immediate Enterprise upgrade signal.
+
+Fact: SSO/SAML requests are strongly associated with later Enterprise upgrades.
+Belief: IT/security involvement is a structural inflection from team adoption to org-wide adoption.
+Value: Security and compliance language should be treated as strategic buying intent, not support noise.
+Precedent: SSO request clusters have consistently preceded enterprise procurement motion.

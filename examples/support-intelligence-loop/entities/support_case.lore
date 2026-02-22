@@ -1,0 +1,36 @@
+---
+entity: SupportCase
+description: A bounded customer support issue tracked from intake to resolution.
+provenance:
+  author: support-ops
+  source: domain-expert
+  confidence: 0.9
+  created: 2026-02-22
+status: stable
+---
+
+## Attributes
+
+case_id: string [required, unique]
+  | Unique case identifier.
+
+priority: enum [p1, p2, p3, p4]
+  | Case urgency classification.
+
+state: enum [new, investigating, waiting-on-customer, resolved, reopened]
+  | Current case state.
+
+reopened_count: int [0 .. 20]
+  | Number of reopen events after first resolution.
+
+first_response_hours: float [0.0 .. 720.0]
+  | Hours from case creation to first response.
+
+## Identity
+
+A SupportCase is identified by case_id.
+
+## Notes
+
+Case state transitions should preserve narrative reasons from conversations,
+not only status snapshots.

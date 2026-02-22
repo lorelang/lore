@@ -13,6 +13,7 @@ from lore.models import (
 from lore.parser import parse_ontology
 from lore.curator import curate_consistency
 from lore.compilers.agent import compile_agent_context
+from lore.validator import validate, Severity
 
 
 # ---------------------------------------------------------------------------
@@ -396,7 +397,7 @@ class TestLoreInit:
         content = (target / "lore.yaml").read_text()
         assert "name: my-test" in content
         assert "domain: Testing" in content
-        assert "version: 0.1.0" in content
+        assert "version: 0.2.0" in content
         assert "staleness: 90d" in content
 
     def test_init_creates_example_entity(self, tmp_path):
@@ -462,6 +463,132 @@ class TestLoreInit:
         assert "name: no-domain" in content
         # Domain should not appear in manifest
         assert "domain:" not in content
+
+
+# ---------------------------------------------------------------------------
+# lore setup command
+# ---------------------------------------------------------------------------
+
+class TestLoreSetup:
+    def test_setup_creates_ai_first_structure(self, tmp_path):
+        """lore setup creates full AI-first starter files."""
+        target = tmp_path / "new-domain"
+        from lore.cli import cmd_setup
+        cmd_setup(
+            str(target),
+            name="new-domain",
+            domain="Customer Discovery",
+            maintainer="Founder Office",
+            role="Domain Owner",
+            proposals="review-required",
+            staleness="45d",
+        )
+
+        assert (target / "lore.yaml").exists()
+        assert (target / "entities" / "domain_object.lore").exists()
+        assert (target / "relationships" / "semantic_links.lore").exists()
+        assert (target / "rules" / "distillation.lore").exists()
+        assert (target / "taxonomies" / "domain_object_category.lore").exists()
+        assert (target / "glossary" / "terms.lore").exists()
+        assert (target / "views" / "domain_curator.lore").exists()
+        assert (target / "observations" / "kickoff_notes.lore").exists()
+        assert (target / "outcomes" / "kickoff_retro.lore").exists()
+
+    def test_setup_manifest_defaults(self, tmp_path):
+        """lore setup writes governance-first manifest defaults."""
+        target = tmp_path / "setup-defaults"
+        from lore.cli import cmd_setup
+        cmd_setup(
+            str(target),
+            name="setup-defaults",
+            domain="Support Ops",
+            maintainer="Ops Team",
+            role="Domain Owner",
+            proposals="review-required",
+            staleness="45d",
+        )
+
+        content = (target / "lore.yaml").read_text()
+        assert "name: setup-defaults" in content
+        assert "domain: Support Ops" in content
+        assert "proposals: review-required" in content
+        assert "staleness: 45d" in content
+        assert "name: Ops Team" in content
+        assert "role: Domain Owner" in content
+
+    def test_setup_result_validates_cleanly(self, tmp_path):
+        """Scaffolded setup ontology parses and validates with no warnings."""
+        target = tmp_path / "setup-validate"
+        from lore.cli import cmd_setup
+        cmd_setup(
+            str(target),
+            name="setup-validate",
+            domain="Implementation",
+            maintainer="Implementation Ops",
+            role="Domain Owner",
+            proposals="review-required",
+            staleness="30d",
+        )
+
+        ont = parse_ontology(target)
+        diags = validate(ont)
+        errors = [d for d in diags if d.severity == Severity.ERROR]
+        warnings = [d for d in diags if d.severity == Severity.WARNING]
+        infos = [d for d in diags if d.severity == Severity.INFO]
+        assert errors == []
+        assert warnings == []
+        assert infos == []
+
+    def test_setup_allows_custom_governance(self, tmp_path):
+        """lore setup accepts custom evolution settings."""
+        target = tmp_path / "setup-custom"
+        from lore.cli import cmd_setup
+        cmd_setup(
+            str(target),
+            name="setup-custom",
+            domain="Custom",
+            maintainer="Platform",
+            role="Steward",
+            proposals="open",
+            staleness="30d",
+        )
+
+        content = (target / "lore.yaml").read_text()
+        assert "proposals: open" in content
+        assert "staleness: 30d" in content
+
+    def test_setup_refuses_nonempty_directory(self, tmp_path):
+        """lore setup exits when target directory is non-empty."""
+        target = tmp_path / "existing-setup"
+        target.mkdir()
+        (target / "already.txt").write_text("x")
+
+        from lore.cli import cmd_setup
+        with pytest.raises(SystemExit):
+            cmd_setup(
+                str(target),
+                name=None,
+                domain="",
+                maintainer="Domain Team",
+                role="Domain Owner",
+                proposals="review-required",
+                staleness="45d",
+            )
+
+    def test_setup_rejects_invalid_staleness(self, tmp_path):
+        """lore setup validates staleness format."""
+        target = tmp_path / "bad-staleness"
+        from lore.cli import cmd_setup
+        with pytest.raises(SystemExit):
+            cmd_setup(
+                str(target),
+                name=None,
+                domain="",
+                maintainer="Domain Team",
+                role="Domain Owner",
+                proposals="review-required",
+                staleness="90x",
+            )
 
 
 # ---------------------------------------------------------------------------

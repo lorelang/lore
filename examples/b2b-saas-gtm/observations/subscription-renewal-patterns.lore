@@ -1,0 +1,23 @@
+---
+observations: Subscription Renewal Patterns
+about: Subscription
+observed_by: renewal-pattern-agent
+date: 2026-02-21
+confidence: 0.73
+status: proposed
+provenance:
+  author: renewal-pattern-agent
+  source: ai-generated
+  confidence: 0.73
+  created: 2026-02-21
+---
+
+## Seat utilization recovery windows matter before renewal
+
+Subscriptions with temporary utilization dips often recovered when intervention
+occurred more than 60 days before renewal.
+
+Fact: Early intervention correlated with utilization recovery in low-utilization subscriptions.
+Belief: Timing of renewal preparation is a stronger lever than static utilization thresholds.
+Value: Renewal strategy should favor proactive value recovery over late discounting.
+Precedent: Last-cycle save motions succeeded when initiated before the final 60-day window.

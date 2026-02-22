@@ -1,0 +1,33 @@
+---
+view: Implementation Manager
+audience: Implementation leads and delivery operations
+description: Focuses on onboarding risk detection and execution ownership.
+---
+
+## Entities
+- Client (all)
+- Stakeholder (role, availability_risk)
+- Integration (system_name, readiness, estimated_effort_days)
+- Workstream (name, status, risk_pattern, target_date)
+
+## Relationships
+- HAS_STAKEHOLDER
+- REQUIRES_INTEGRATION
+- HAS_WORKSTREAM
+- OWNS_WORKSTREAM
+- BLOCKED_BY
+- onboarding-risk-path
+- sponsor-gap-path
+
+## Rules
+- security-review-critical-path
+- integration-readiness-watch
+
+## Key Questions
+- Which workstreams are blocked by unresolved integrations?
+- Where do we have ownership gaps on active workstreams?
+- Which recurring risks should become default kickoff checklists?
+
+## Not In Scope
+
+Detailed invoice and procurement contract data.

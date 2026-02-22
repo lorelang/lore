@@ -1,0 +1,30 @@
+---
+entity: Stakeholder
+description: A person who influences implementation decisions, timelines, or risks.
+provenance:
+  author: implementation-ops
+  source: domain-expert
+  confidence: 0.9
+  created: 2026-02-22
+status: stable
+---
+
+## Attributes
+
+full_name: string [required]
+  | Full name as captured in meetings.
+
+role: enum [executive-sponsor, technical-owner, security-reviewer, implementation-lead]
+  | Functional role in the implementation process.
+
+availability_risk: enum [low, medium, high]
+  | Best-effort estimate of responsiveness and decision latency risk.
+
+## Identity
+
+Stakeholders are resolved by full_name within a client context.
+
+## Notes
+
+Role shifts are common during onboarding; observations should capture transitions,
+not only static role assignments.

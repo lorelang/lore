@@ -1,0 +1,33 @@
+---
+observations: Week 7 Voice of Customer Synthesis
+about: Account
+observed_by: support-synthesis-agent
+date: 2026-02-20
+confidence: 0.79
+status: proposed
+provenance:
+  author: support-synthesis-agent
+  source: ai-generated
+  confidence: 0.79
+  created: 2026-02-20
+---
+
+## OrbitPay churn risk appears through repeated onboarding friction
+
+OrbitPay opened three onboarding-related cases in 18 days with recurring negative
+sentiment around initial setup clarity and delayed resolution ownership.
+
+Fact: OrbitPay has three unresolved onboarding-friction cases in under three weeks.
+Belief: Repeated onboarding ambiguity is increasing renewal risk despite neutral usage metrics.
+Value: Customer team emphasizes predictable implementation over feature breadth.
+Precedent: Similar recurrence patterns preceded downsell risk in prior mid-market accounts.
+
+## DeltaGrid reliability complaints are concentrated in one integration path
+
+DeltaGrid filed multiple negative-sentiment conversations tied to a single identity
+integration flow and requested executive escalation on second reopen.
+
+Fact: DeltaGrid reopened two p1 cases associated with identity integration failures.
+Belief: The root issue is a systemic integration debt pattern, not isolated case handling.
+Value: Customer prioritizes reliability and transparent ownership during incidents.
+Precedent: Concentrated p1 reopen patterns have correlated with trust degradation before QBR cycles.

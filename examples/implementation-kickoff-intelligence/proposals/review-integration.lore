@@ -1,0 +1,26 @@
+---
+proposal: Review entity: Integration
+provenance:
+  source: derived
+  confidence: 0.5
+status: proposed
+review_required: true
+review_state: pending
+---
+
+## Summary
+
+Multiple outcomes reference the 'Integration' entity.
+Based on 1 takeaway(s) from 1 outcome(s).
+
+## Takeaways
+
+- integration effort estimates should include staffing assumptions as explicit fields
+
+## Source Outcomes
+
+- Apex integration-capacity prediction - partially correct
+
+## References
+
+- observations/week1-kickoff-signals.lore#apex-logistics-integration-scope-is-wider-than-expected

@@ -1,0 +1,32 @@
+---
+entity: Conversation
+description: A customer-agent interaction within or linked to a support case.
+provenance:
+  author: support-ops
+  source: domain-expert
+  confidence: 0.88
+  created: 2026-02-22
+status: stable
+---
+
+## Attributes
+
+occurred_at: datetime [required]
+  | UTC timestamp for this interaction.
+
+channel: enum [email, chat, call, ticket-comment]
+  | Primary communication channel.
+
+sentiment: enum [positive, neutral, negative]
+  | Best-effort sentiment classification from conversation synthesis.
+
+summary: text
+  | Human-readable summary of interaction context and outcomes.
+
+## Identity
+
+A Conversation is identified by occurred_at and case context.
+
+## Notes
+
+Conversation summaries should preserve customer language for later taxonomy and rule refinement.

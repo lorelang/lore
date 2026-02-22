@@ -1,0 +1,41 @@
+---
+domain: Implementation Delivery
+description: Core links for kickoff, ownership, and execution risk.
+---
+
+## HAS_STAKEHOLDER
+  from: Client -> to: Stakeholder
+  cardinality: one-to-many
+  | A client has multiple implementation stakeholders.
+
+## REQUIRES_INTEGRATION
+  from: Client -> to: Integration
+  cardinality: one-to-many
+  | Integrations required for go-live.
+
+## HAS_WORKSTREAM
+  from: Client -> to: Workstream
+  cardinality: one-to-many
+  | Implementation is organized into explicit workstreams.
+
+## OWNS_WORKSTREAM
+  from: Stakeholder -> to: Workstream
+  cardinality: many-to-many
+  | Stakeholders own or co-own workstreams.
+
+  properties:
+    ownership_type: string
+      | owner, approver, or contributor.
+
+## BLOCKED_BY
+  from: Workstream -> to: Integration
+  cardinality: many-to-many
+  | Workstreams may be blocked by unresolved integrations.
+
+## Traversal: onboarding-risk-path
+  path: Client -[HAS_WORKSTREAM]-> Workstream -[BLOCKED_BY]-> Integration
+  | Identify workstreams with integration-driven schedule risk.
+
+## Traversal: sponsor-gap-path
+  path: Client -[HAS_STAKEHOLDER]-> Stakeholder -[OWNS_WORKSTREAM]-> Workstream
+  | Identify active workstreams with weak executive or technical sponsorship.

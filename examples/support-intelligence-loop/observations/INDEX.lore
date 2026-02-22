@@ -1,0 +1,18 @@
+---
+index: true
+generated: 2026-02-22
+---
+
+## Overview
+
+Field notes and observations (2 entries across 1 files).
+
+## Contents
+
+- `week7-voc-synthesis.lore` — Week 7 Voice of Customer Synthesis about Account (2026-02-20): 2 observations, 8 claims
+
+## Search Guide
+
+- To find observations about an entity: `grep -l 'about: EntityName' observations/*.lore`
+- To find recent observations: sort by `date:` field in frontmatter
+- To find semi-structured signals: `grep -R '^(Fact|Belief|Value|Precedent):' observations/`

@@ -2,14 +2,14 @@
 observations: Signal Quality Review
 about: Signal
 observed_by: signal-audit-agent
-date: 2025-06-20
-confidence: 0.82
+date: 2026-02-20
+confidence: 0.6
 status: proposed
 provenance:
   author: signal-audit-agent
   source: ai-generated
-  confidence: 0.82
-  created: 2025-06-20
+  confidence: 0.6
+  created: 2026-02-20
 ---
 
 ## Executive engagement signals are strongest predictor
@@ -23,6 +23,11 @@ Current signal weighting in the expansion detection rules
 underweights executive engagement relative to raw usage growth.
 Recommend rebalancing.
 
+Fact: Executive engagement performed as the highest-conversion predictor in the sampled expansion set.
+Belief: Existing weighting over-indexes on usage magnitude and under-indexes on stakeholder power signals.
+Value: Scoring should prioritize signals that are both predictive and operationally actionable for GTM teams.
+Precedent: Prior win analyses consistently elevated executive-led interactions as high-quality evidence.
+
 ## Usage decline signals need industry context
 
 The usage-decline-alert rule fires uniformly across all
@@ -34,3 +39,8 @@ holiday periods but recover quickly.
 Without industry context, the false positive rate for
 usage decline signals is approximately 35% for enterprise
 accounts in cyclical industries.
+
+Fact: Uniform decline thresholds generated elevated false-positive rates in cyclical industries.
+Belief: Segment and seasonality context is required for reliable contraction risk classification.
+Value: Precision in risk alerts is preferred over high-volume noisy alerting.
+Precedent: Historical cyclical cohorts repeatedly exhibited recoverable usage dips without churn outcomes.

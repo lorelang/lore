@@ -1,0 +1,23 @@
+---
+observations: Interaction Sentiment Patterns
+about: Interaction
+observed_by: engagement-audit-agent
+date: 2026-02-21
+confidence: 0.72
+status: proposed
+provenance:
+  author: engagement-audit-agent
+  source: ai-generated
+  confidence: 0.72
+  created: 2026-02-21
+---
+
+## Sequence shifts are more predictive than single sentiment events
+
+Accounts with two consecutive negative support-ticket interactions followed by
+silence were higher risk than accounts with isolated negative conversations.
+
+Fact: Consecutive negative interactions plus drop-off outperformed single-event alerts.
+Belief: Interaction sequence context should influence signal strength weighting.
+Value: Narrative continuity matters more than isolated sentiment spikes.
+Precedent: Similar sequence patterns preceded contraction conversations in prior cohorts.

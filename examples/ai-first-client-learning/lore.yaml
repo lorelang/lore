@@ -1,0 +1,13 @@
+name: ai-first-client-learning
+version: 0.2.0
+description: >
+  AI-first ontology for distilling client meeting learnings into reusable domain
+  knowledge for agent workflows.
+domain: B2B Startup Customer Discovery
+maintainers:
+  - name: Founder Office
+    role: Domain Owner
+
+evolution:
+  proposals: review-required
+  staleness: 45d

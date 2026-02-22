@@ -1,0 +1,23 @@
+---
+observations: Opportunity Conversion Patterns
+about: Opportunity
+observed_by: pipeline-analysis-agent
+date: 2026-02-21
+confidence: 0.7
+status: proposed
+provenance:
+  author: pipeline-analysis-agent
+  source: ai-generated
+  confidence: 0.7
+  created: 2026-02-21
+---
+
+## Expansion opportunities with identified champions close faster
+
+Expansion opportunities entering evaluation with a named champion advanced more
+reliably than opportunities missing explicit internal advocacy.
+
+Fact: Named-champion opportunities had materially higher close rates and shorter cycle times.
+Belief: Champion presence should be mandatory before late-stage pipeline progression.
+Value: Forecast confidence should favor opportunities with explicit buying-network mapping.
+Precedent: Prior late-stage stalls clustered around opportunities without clear champions.

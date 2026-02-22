@@ -1,0 +1,37 @@
+---
+entity: PatientCohort
+description: A population segment receiving coordinated specialty care.
+provenance:
+  author: care-navigation-team
+  source: domain-expert
+  confidence: 0.94
+  created: 2026-02-20
+status: stable
+---
+
+## Attributes
+
+cohort_id: string [required, unique]
+  | Internal cohort identifier.
+
+condition_group: enum [cardiology, oncology, endocrinology, neurology]
+  | Primary clinical condition grouping.
+
+risk_band: enum [low, medium, high]
+  | Operational risk used for outreach prioritization.
+
+payer_mix: enum [commercial, medicare, medicaid, mixed]
+  | Dominant payer mix profile.
+
+## Identity
+
+A PatientCohort is uniquely identified by cohort_id.
+
+## Lifecycle
+
+Identified -> stratified -> active-navigation -> maintenance -> archived.
+
+## Notes
+
+Use cohort narratives and care-episode observations to reason about barriers.
+Hard structured fields often lag real care coordination issues.

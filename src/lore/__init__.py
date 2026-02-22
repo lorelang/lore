@@ -7,4 +7,4 @@ __version__ = "0.2.0"
 
 from .parser import parse_ontology
 from .validator import validate
-from .models import Ontology, Provenance, PluginConfig
+from .models import Ontology, Provenance, PluginConfig, KnowledgeClaim

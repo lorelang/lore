@@ -1,0 +1,23 @@
+---
+observations: Competitor Pressure Review
+about: Competitor
+observed_by: competitive-intel-agent
+date: 2026-02-21
+confidence: 0.69
+status: proposed
+provenance:
+  author: competitive-intel-agent
+  source: ai-generated
+  confidence: 0.69
+  created: 2026-02-21
+---
+
+## DIY and inertia competitors appear earliest in mid-market
+
+In mid-market accounts, loss narratives often started as "we can build this" or
+"current process is good enough" before named vendor competition appeared.
+
+Fact: Early-stage competitive risk frequently manifested as DIY or do-nothing positioning.
+Belief: Competitive monitoring should treat inertia as a first-class competitor pattern.
+Value: Counter-positioning should focus on time-to-value and operational reliability.
+Precedent: Deals reframed around implementation burden were more likely to recover.

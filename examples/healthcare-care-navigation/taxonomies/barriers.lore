@@ -1,0 +1,20 @@
+---
+taxonomy: CareBarrier
+applied_to: CareEpisode.status
+description: Taxonomy of barriers affecting care completion.
+---
+
+Barrier
+├── Access Barrier           @tag: scheduling
+│   ├── Provider Capacity    @tag: supply
+│   └── Network Restriction  @tag: payer
+├── Adherence Barrier        @tag: patient
+│   ├── Transportation Gap   @tag: logistics
+│   └── Caregiver Constraint @tag: support
+└── Administrative Barrier   @tag: operations
+    ├── Prior Authorization  @tag: insurance
+    └── Documentation Delay  @tag: process
+
+## Inheritance Rules
+
+If Prior Authorization is present and days_to_first_visit exceeds 21, inherit Access Barrier.

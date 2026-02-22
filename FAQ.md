@@ -6,11 +6,14 @@ Frequently asked questions for developers building with or contributing to Lore.
 
 ### What is Lore?
 
-Lore is a human-readable, machine-parseable format (`.lore` files) for defining domain ontologies. Think of it as "Markdown for domain knowledge" — you describe your business domain (entities, relationships, rules, glossary) in structured prose, and Lore compiles it to whatever your systems need: Neo4j schemas, AI agent prompts, embedding chunks, JSON, Mermaid diagrams, or Palantir Foundry definitions.
+Lore is a human-readable, machine-parseable format (`.lore` files) for defining domain ontologies. Think of it as "Markdown for domain knowledge" — you describe your business domain (entities, relationships, rules, glossary) in structured prose, and Lore compiles it to whatever your systems need: Neo4j schemas, AI agent prompts, embedding chunks, JSON, JSON-LD, Mermaid diagrams, or Palantir Foundry definitions.
 
 ### How is Lore different from JSON Schema / YAML configs / Protobuf?
 
 Those formats optimize for machines. Lore optimizes for **shared understanding between humans and AI agents**. A `.lore` file reads like documentation but parses like code. It supports freeform prose (`## Notes`, `## Identity`, `## Lifecycle`) alongside structured attributes — because domain knowledge is richer than what fits in a type system.
+
+Lore is intentionally unstructured-first for agent context: structure is there to
+improve consistency, not to replace narrative domain meaning.
 
 ### Do I need an LLM to use Lore?
 
@@ -28,6 +31,8 @@ my-domain/
 ```
 
 Run `lore init my-domain` to scaffold this automatically.
+For an AI-first full starter (entities + relationships + rules + taxonomy +
+view + observations + outcomes), run `lore setup my-domain`.
 
 ### Can AI agents write .lore files?
 
@@ -55,6 +60,7 @@ The agent can also use the filesystem directly — `grep`, `cat`, and `ls` on th
 |--------|---------|--------|
 | AI Agent Context | `lore compile . -t agent` | Structured XML prompt |
 | JSON | `lore compile . -t json` | Full ontology as JSON |
+| JSON-LD | `lore compile . -t jsonld` | Semantic-web compatible graph JSON |
 | Neo4j | `lore compile . -t neo4j` | Cypher DDL + constraints |
 | Embeddings | `lore compile . -t embeddings` | JSONL chunks for vector stores |
 | Mermaid | `lore compile . -t mermaid` | Entity relationship diagram |
@@ -85,6 +91,50 @@ The core innovation: **Compile -> Observe -> Act -> Record -> Evolve -> Review**
 
 This turns your ontology from static documentation into a living, self-improving knowledge base.
 
+### How do I capture structured learning from meeting recordings?
+
+Use observations with optional claim markers:
+
+- `Fact:` concrete statement
+- `Belief:` likely interpretation
+- `Value:` policy or principle
+- `Precedent:` historical pattern
+
+These markers are parsed and included in agent/json/embedding outputs, so meeting insights can be distilled into Lore instead of staying in raw transcript memory.
+
+You can also generate these observation drafts directly:
+
+```bash
+# Transcript -> observations/*.lore
+lore ingest transcript my-ontology \
+  --input ./meeting.txt \
+  --about Account
+
+# Memory export -> observations/*.lore
+lore ingest memory my-ontology \
+  --adapter mem0 \
+  --input ./memory.json \
+  --about Account
+```
+
+Then run:
+
+```bash
+lore validate my-ontology
+```
+
+to verify the generated file before further curation/evolution.
+
+### How do I review generated proposals?
+
+Use `lore review` to apply an explicit accept/reject decision and reviewer metadata:
+
+```bash
+lore review my-ontology/proposals --decision accept --reviewer ontology-curator
+```
+
+For batch re-review on already-reviewed files, add `--all`.
+
 ### How does contradiction handling work?
 
 Three levels:
@@ -104,7 +154,7 @@ plugins:
   curators:
     naming: my_plugins.naming:check_naming
   directories:
-    - playbooks
+    playbooks: my_plugins.playbooks:parse_playbook
 ```
 
 Your custom compiler receives an `Ontology` object and returns a string. Your custom curator receives an `Ontology` and returns a `CurationReport`.
@@ -126,7 +176,7 @@ Context Repositories (Letta) focus on agent memory retrieval. Skill Graphs focus
 
 ### What Python version is required?
 
-Python 3.9+. The only dependency is PyYAML.
+Python 3.10+. The only dependency is PyYAML.
 
 ### How do I contribute?
 

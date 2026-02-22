@@ -1,0 +1,13 @@
+name: implementation-kickoff-intelligence
+version: 0.2.0
+description: >
+  AI-first ontology for turning kickoff and implementation meeting recordings
+  into reusable delivery intelligence.
+domain: B2B SaaS Implementation and Onboarding
+maintainers:
+  - name: Implementation Operations
+    role: Domain Owner
+
+evolution:
+  proposals: review-required
+  staleness: 30d

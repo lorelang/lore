@@ -1,0 +1,35 @@
+---
+index: true
+generated: 2026-02-22
+---
+
+## Overview
+
+Relationship definitions (18 total across 3 files).
+
+## Contents
+
+- `commercial.lore` — Commercial: HAS_SUBSCRIPTION, HAS_CONTACT, SUBSCRIBES_TO, HAS_OPPORTUNITY, OWNS, SUBSIDIARY_OF
+- `engagement.lore` — Engagement: PARTICIPATED_IN, HAS_USAGE, TRIGGERED, GENERATED_FROM, GENERATED_FROM_USAGE, RESULTED_IN
+- `product-intelligence.lore` — Product Intelligence: INCLUDES_FEATURE, HAS_ADOPTED, COMPETES_WITH, LOST_TO, RECOMMENDS_PLAY, REQUIRES_FEATURE
+
+## Relationship Map
+
+- Account --[HAS_SUBSCRIPTION]--> Subscription
+- Account --[HAS_CONTACT]--> Contact
+- Subscription --[SUBSCRIBES_TO]--> Product
+- Account --[HAS_OPPORTUNITY]--> Opportunity
+- Contact --[OWNS]--> Account
+- Account --[SUBSIDIARY_OF]--> Account
+- Contact --[PARTICIPATED_IN]--> Interaction
+- Account --[HAS_USAGE]--> Usage
+- Account --[TRIGGERED]--> Signal
+- Signal --[GENERATED_FROM]--> Interaction
+- Signal --[GENERATED_FROM_USAGE]--> Usage
+- Signal --[RESULTED_IN]--> Opportunity
+- Product --[INCLUDES_FEATURE]--> Feature
+- Account --[HAS_ADOPTED]--> Feature
+- Competitor --[COMPETES_WITH]--> Product
+- Opportunity --[LOST_TO]--> Competitor
+- Signal --[RECOMMENDS_PLAY]--> Play
+- Feature --[REQUIRES_FEATURE]--> Feature

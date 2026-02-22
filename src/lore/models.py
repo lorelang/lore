@@ -38,6 +38,7 @@ class Attribute:
     name: str
     type: str
     constraints: list[str] = field(default_factory=list)
+    enum_values: list[str] = field(default_factory=list)
     description: str = ""
     annotations: dict[str, str] = field(default_factory=dict)
     reference_to: Optional[str] = None  # For -> EntityName types
@@ -167,10 +168,18 @@ class View:
 
 
 @dataclass
+class KnowledgeClaim:
+    """A semi-structured claim extracted from prose."""
+    kind: str   # fact | belief | value | precedent
+    text: str
+
+
+@dataclass
 class Observation:
     """A single observation (one ## section in an observation file)."""
     heading: str
     prose: str = ""
+    claims: list[KnowledgeClaim] = field(default_factory=list)
 
 
 @dataclass
@@ -221,6 +230,7 @@ class PluginConfig:
     compilers: dict[str, str] = field(default_factory=dict)    # name -> module:function
     curators: dict[str, str] = field(default_factory=dict)     # name -> module:function
     directories: list[str] = field(default_factory=list)       # extra file type dirs
+    directory_parsers: dict[str, str] = field(default_factory=dict)  # dir -> module:function
 
 
 @dataclass
@@ -246,6 +256,7 @@ class Ontology:
     views: list[View] = field(default_factory=list)
     observation_files: list[ObservationFile] = field(default_factory=list)
     outcome_files: list[OutcomeFile] = field(default_factory=list)
+    extensions: dict[str, list] = field(default_factory=dict)
 
     @property
     def all_relationships(self) -> list[Relationship]:
@@ -278,3 +289,7 @@ class Ontology:
     @property
     def all_takeaways(self) -> list[str]:
         return [t for o in self.all_outcomes for t in o.takeaways]
+
+    @property
+    def all_claims(self) -> list[KnowledgeClaim]:
+        return [c for o in self.all_observations for c in o.claims]

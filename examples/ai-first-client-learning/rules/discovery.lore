@@ -1,0 +1,34 @@
+---
+domain: Discovery Intelligence
+description: Rules for turning unstructured client learning into actionable context.
+---
+
+## security-gate-alert
+  applies_to: Client
+  severity: critical
+  trigger: Security review blockers emerge in meetings
+
+  condition:
+    Client.security_tier = "high"
+    AND latest_observation_mentions("security review blocked")
+
+  action:
+    Create follow-up task for technical founder
+    Attach precedent observations and mitigation plan
+
+  Security blockers are often implicit in meeting language before they appear in CRM.
+
+## champion-readiness-score
+  applies_to: Stakeholder
+  severity: info
+  trigger: Weekly learning synthesis run
+  outputs: Stakeholder.champion_likelihood
+
+  condition:
+    Stakeholder.role = "technical-buyer"
+    AND has_positive_precedent_signals(Stakeholder)
+
+  action:
+    Update champion likelihood score
+
+  This is intentionally best-effort and should be interpreted with narrative context.

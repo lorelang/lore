@@ -1,0 +1,27 @@
+---
+domain: Discovery
+description: Core links for client learning and pilot execution.
+---
+
+## HAS_STAKEHOLDER
+  from: Client -> to: Stakeholder
+  cardinality: one-to-many
+  | Client organizations include multiple stakeholders with different influence.
+
+## HAS_ENGAGEMENT
+  from: Client -> to: Engagement
+  cardinality: one-to-many
+  | Discovery and pilot interactions connected to a client.
+
+## INVOLVES
+  from: Engagement -> to: Stakeholder
+  cardinality: many-to-many
+  | Stakeholders who participated in a specific engagement.
+
+  properties:
+    influence_weight: float
+      | Relative influence in this interaction.
+
+## Traversal: decision-risk-path
+  path: Client -[HAS_STAKEHOLDER]-> Stakeholder -[INVOLVES]-> Engagement
+  | Use to understand who shapes risk and adoption decisions.

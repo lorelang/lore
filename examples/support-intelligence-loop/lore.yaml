@@ -1,0 +1,13 @@
+name: support-intelligence-loop
+version: 0.2.0
+description: >
+  AI-first ontology for converting support conversations into durable voice-of-customer
+  intelligence for retention and product decisions.
+domain: B2B SaaS Support and Retention
+maintainers:
+  - name: Support Operations
+    role: Domain Owner
+
+evolution:
+  proposals: review-required
+  staleness: 21d

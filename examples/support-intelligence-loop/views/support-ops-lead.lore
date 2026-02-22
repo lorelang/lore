@@ -1,0 +1,32 @@
+---
+view: Support Operations Lead
+audience: Support operations and retention stakeholders
+description: Prioritizes recurring friction signals and case-level trust risk.
+---
+
+## Entities
+- Account (name, segment, health_band)
+- SupportCase (case_id, priority, state, reopened_count, first_response_hours)
+- Conversation (channel, sentiment, summary)
+- IssueTheme (theme_name, category, recurrence_score)
+
+## Relationships
+- HAS_CASE
+- HAS_CONVERSATION
+- MENTIONS_THEME
+- LINKED_TO_THEME
+- churn-risk-signal-path
+- repeat-friction-path
+
+## Rules
+- recurring-negative-theme-alert
+- p1-reopen-watch
+
+## Key Questions
+- Which accounts show repeated negative onboarding signals?
+- Which high-priority cases indicate systemic product or process gaps?
+- Which themes should become default roadmap or playbook inputs?
+
+## Not In Scope
+
+Detailed engineering incident timeline and low-level infrastructure telemetry.

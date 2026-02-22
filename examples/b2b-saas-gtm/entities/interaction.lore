@@ -5,6 +5,12 @@ description: >
   contacts. Interactions are the raw signal layer — patterns
   in interactions reveal expansion readiness, churn risk,
   and relationship health.
+provenance:
+  author: revops-team
+  source: domain-expert
+  confidence: 0.9
+  created: 2026-02-22
+status: stable
 ---
 
 ## Attributes
@@ -36,6 +42,11 @@ summary: text
 is_executive: boolean
   | True if any participant has seniority = vp or c-level.
   | Executive engagement is a strong health signal.
+
+## Identity
+
+An Interaction is identified by timestamp plus the participant set
+within an account context.
 
 ## Notes
 

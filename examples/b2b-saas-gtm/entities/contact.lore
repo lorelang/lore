@@ -5,6 +5,12 @@ description: >
   stakeholder (customer) or internal team member. Contacts
   are the human nodes in the relationship graph — deals,
   engagement, and influence flow through people.
+provenance:
+  author: revops-team
+  source: domain-expert
+  confidence: 0.91
+  created: 2026-02-22
+status: stable
 ---
 
 ## Attributes

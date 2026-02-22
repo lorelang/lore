@@ -1,0 +1,25 @@
+---
+proposal: Review entity: Account
+provenance:
+  source: derived
+  confidence: 0.5
+status: proposed
+---
+
+## Summary
+
+Multiple outcomes reference the 'Account' entity.
+Based on 1 takeaway(s) from 1 outcome(s).
+
+## Takeaways
+
+- Account entity should track industry vertical to enable seasonal pattern detection
+
+## Source Outcomes
+
+- Beta Corp churn risk — false positive
+
+## References
+
+- observations/signal-quality-review.lore#usage-decline-signals-need-industry-context
+- observations/q2-account-signals.lore#beta-corp-usage-decline-looks-seasonal

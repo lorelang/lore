@@ -1,0 +1,29 @@
+---
+proposal: Review entity: Client
+provenance:
+  source: derived
+  confidence: 0.65
+status: proposed
+review_required: true
+review_state: pending
+---
+
+## Summary
+
+Multiple outcomes reference the 'Client' entity.
+Based on 2 takeaway(s) from 2 outcome(s).
+
+## Takeaways
+
+- add a security-readiness checklist to onboarding playbooks for enterprise clients
+- add budget-cycle context as an explicit Client attribute candidate
+
+## Source Outcomes
+
+- Northwind delay risk prediction — correct
+- Brightwell expansion intent prediction — partially correct
+
+## References
+
+- observations/discovery-call-week1.lore#northwind-security-process-is-a-rollout-gate
+- observations/discovery-call-week1.lore#brightwell-has-latent-expansion-intent

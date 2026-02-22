@@ -1,0 +1,53 @@
+---
+index: true
+generated: 2026-02-22
+---
+
+## Overview
+
+This is the **healthcare-care-navigation** ontology (v0.2.0).
+AI-first ontology for specialty care navigation across referral intake, scheduling, adherence, and care outcomes.
+
+## Stats
+
+- 3 entities, 2 relationships, 2 rules
+- 1 taxonomies, 3 glossary terms
+- 0 observations, 0 claims, 0 outcomes
+- 1 views
+
+## Directory Map
+
+- `entities/` — Domain concepts — the nouns of this ontology (3 files)
+- `relationships/` — How entities connect — the verbs (1 files)
+- `rules/` — Business logic, scoring, and alert conditions (1 files)
+- `taxonomies/` — Classification hierarchies and type trees (1 files)
+- `glossary/` — Canonical term definitions — use these meanings (1 files)
+- `views/` — Team-scoped perspectives (filtered ontology slices) (1 files)
+
+## Entities
+
+- **CareEpisode** (4 attrs) — A bounded care journey from referral to follow-up completion.
+- **PatientCohort** (4 attrs) — A population segment receiving coordinated specialty care.
+- **Provider** (4 attrs) — Clinical provider or care team responsible for treatment delivery.
+
+## Agent-First Reading Order
+
+For AI context engineering, read in this order:
+1. `observations/` and `outcomes/` for latest unstructured domain learning
+2. `entities/` notes and lifecycle sections for semantic grounding
+3. `rules/` and `relationships/` for constraint and traversal guardrails
+4. `taxonomies/` and `glossary/` for normalization and canonical terms
+
+## Search Guide
+
+When an AI agent needs to find information in this ontology:
+
+- **What is X?** → Look in `entities/` for the entity definition, `glossary/` for term definitions
+- **How does X relate to Y?** → Look in `relationships/` for connections
+- **What rules apply to X?** → Look in `rules/` and check `applies_to` fields
+- **What happened with X?** → Look in `observations/` for field notes, `outcomes/` for retrospectives
+- **What types/categories exist?** → Look in `taxonomies/`
+- **What does this term mean?** → Look in `glossary/`
+- **Team-specific context?** → Look in `views/` (available: Care Navigator)
+
+For full compiled context, run: `lore compile . -t agent`

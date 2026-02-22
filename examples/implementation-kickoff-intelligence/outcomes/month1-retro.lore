@@ -1,0 +1,31 @@
+---
+outcomes: Month 1 Kickoff Retrospective
+reviewed_by: implementation-retro-agent
+date: 2026-02-22
+provenance:
+  author: implementation-retro-agent
+  source: ai-generated
+  confidence: 0.87
+  created: 2026-02-22
+status: proposed
+---
+
+## Helio security-delay prediction - correct
+
+Helio kickoff moved by 19 days while legal and security teams aligned on
+artifact ownership. Early warning from kickoff notes was accurate.
+
+Takeaway: include security artifact ownership in the default kickoff template for regulated clients
+Takeaway: convert security-review precedent claims into reusable implementation playbooks
+
+Ref: observations/week1-kickoff-signals.lore#helio-health-has-security-first-procurement-motion
+
+## Apex integration-capacity prediction - partially correct
+
+Apex integration scope remained broad, but timeline impact was contained by
+adding temporary contractor support in week two.
+
+Takeaway: integration effort estimates should include staffing assumptions as explicit fields
+Takeaway: add cross-system phase 1 scope as a high-priority risk pattern in kickoff synthesis
+
+Ref: observations/week1-kickoff-signals.lore#apex-logistics-integration-scope-is-wider-than-expected

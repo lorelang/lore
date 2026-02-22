@@ -6,7 +6,7 @@ for API consumption, interop with other tools, or programmatic access.
 """
 from __future__ import annotations
 import json
-from ..models import Ontology, TaxonomyNode, Provenance
+from ..models import Ontology, TaxonomyNode
 
 
 def _serialize_provenance(prov, status=""):
@@ -44,6 +44,7 @@ def compile_json(ontology: Ontology) -> str:
         "views": [_serialize_view(v) for v in ontology.views],
         "observations": [_serialize_observation_file(of) for of in ontology.observation_files],
         "outcomes": [_serialize_outcome_file(of) for of in ontology.outcome_files],
+        "extensions": ontology.extensions,
     }
     return json.dumps(data, indent=2, default=str)
 
@@ -52,13 +53,21 @@ def _serialize_manifest(ont: Ontology) -> dict:
     if not ont.manifest:
         return {}
     m = ont.manifest
-    return {
+    data = {
         "name": m.name,
         "version": m.version,
         "description": m.description,
         "domain": m.domain,
         "maintainers": m.maintainers,
     }
+    if m.plugins:
+        data["plugins"] = {
+            "compilers": m.plugins.compilers,
+            "curators": m.plugins.curators,
+            "directories": m.plugins.directories,
+            "directory_parsers": m.plugins.directory_parsers,
+        }
+    return data
 
 
 def _serialize_entity(entity) -> dict:
@@ -71,6 +80,7 @@ def _serialize_entity(entity) -> dict:
                 "name": a.name,
                 "type": a.type,
                 "constraints": a.constraints,
+                "enum_values": a.enum_values,
                 "description": a.description,
                 "annotations": a.annotations,
                 "reference_to": a.reference_to,
@@ -170,7 +180,11 @@ def _serialize_observation_file(of) -> dict:
         "observed_by": of.observed_by,
         "date": of.date,
         "observations": [
-            {"heading": obs.heading, "prose": obs.prose}
+            {
+                "heading": obs.heading,
+                "prose": obs.prose,
+                "claims": [{"kind": c.kind, "text": c.text} for c in obs.claims],
+            }
             for obs in of.observations
         ],
     }

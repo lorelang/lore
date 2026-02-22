@@ -1,0 +1,41 @@
+---
+entity: Client
+description: A target customer organization in discovery or pilot.
+provenance:
+  author: founder-office
+  source: domain-expert
+  confidence: 0.92
+  created: 2026-02-20
+status: stable
+---
+
+## Attributes
+
+name: string [required, unique]
+  | Canonical company name.
+
+domain: string [required, unique]
+  | Primary web domain.
+
+segment: enum [seed, smb, mid-market, enterprise]
+  | Commercial segment used for qualification and play selection.
+
+system_of_record: enum [salesforce, hubspot, custom, unknown]
+  | Primary CRM or system where sales ops data is maintained.
+
+security_tier: enum [low, moderate, high]
+  | Internal representation of buyer security requirements.
+
+## Identity
+
+A Client is uniquely identified by primary domain and legal name.
+
+## Lifecycle
+
+Prospect -> discovery -> pilot -> production -> expansion or churn.
+
+## Notes
+
+The agent should treat Client as a narrative-heavy entity. Most useful signals
+come from meeting observations and outcomes before hard CRM fields are fully
+available.

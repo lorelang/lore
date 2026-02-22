@@ -1,0 +1,32 @@
+---
+domain: Care Quality Rules
+description: Operational logic for identifying access and adherence risks.
+---
+
+## access-delay-alert
+  applies_to: CareEpisode
+  severity: critical
+  trigger: Referral wait times exceed acceptable threshold
+
+  condition:
+    CareEpisode.days_to_first_visit > 21
+
+  action:
+    Escalate episode to navigation supervisor
+    Trigger alternate provider search workflow
+
+  Unstructured notes often reveal root causes before scheduling systems update.
+
+## adherence-risk-watch
+  applies_to: CareEpisode
+  severity: warning
+  trigger: Weekly quality review run
+
+  condition:
+    CareEpisode.adherence_score < 0.55
+    AND CareEpisode.status = "in-progress"
+
+  action:
+    Queue targeted outreach and barrier assessment call
+
+  Narrative barriers such as transport and caregiver support should be captured in observations.

@@ -24,6 +24,11 @@ def evolve(ontology: Ontology, output_dir: Path) -> list[dict]:
       - kind: 'rule-adjustment' | 'new-entity' | 'observation-pattern'
     """
     proposals = []
+    proposals_mode = _proposals_mode(ontology)
+
+    # Closed ontologies do not auto-generate proposals.
+    if proposals_mode == "closed":
+        return proposals
 
     # Collect all takeaways with context
     takeaway_entries = []
@@ -48,7 +53,9 @@ def evolve(ontology: Ontology, output_dir: Path) -> list[dict]:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     for group_name, group in groups.items():
-        proposal = _generate_proposal(group_name, group, ontology, output_dir)
+        proposal = _generate_proposal(
+            group_name, group, ontology, output_dir, proposals_mode=proposals_mode
+        )
         if proposal:
             proposals.append(proposal)
 
@@ -96,6 +103,7 @@ def _generate_proposal(
     entries: list[dict],
     ontology: Ontology,
     output_dir: Path,
+    proposals_mode: str = "open",
 ) -> dict | None:
     """Generate a single proposal .lore file from a group of takeaways."""
     if not entries:
@@ -144,6 +152,11 @@ def _generate_proposal(
         "  source: derived",
         f"  confidence: {_compute_confidence(entries)}",
         "status: proposed",
+    ]
+    if proposals_mode == "review-required":
+        lines.append("review_required: true")
+        lines.append("review_state: pending")
+    lines.extend([
         "---",
         "",
         f"## Summary",
@@ -152,7 +165,7 @@ def _generate_proposal(
         "",
         "## Takeaways",
         "",
-    ]
+    ])
 
     for t in takeaways:
         lines.append(f"- {t}")
@@ -183,6 +196,7 @@ def _generate_proposal(
         "takeaways": takeaways,
         "kind": kind,
         "source_outcomes": outcomes,
+        "proposals_mode": proposals_mode,
     }
 
 
@@ -212,3 +226,13 @@ def _compute_confidence(entries: list[dict]) -> float:
         return 0.65
     else:
         return 0.5
+
+
+def _proposals_mode(ontology: Ontology) -> str:
+    """Resolve evolution proposal mode from manifest."""
+    if not ontology.manifest or not ontology.manifest.evolution:
+        return "open"
+    mode = (ontology.manifest.evolution.proposals or "open").strip().lower()
+    if mode not in {"open", "review-required", "closed"}:
+        return "open"
+    return mode

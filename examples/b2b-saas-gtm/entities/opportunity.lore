@@ -4,6 +4,12 @@ description: >
   A potential revenue event — new business, expansion, or
   renewal. Opportunities track the commercial pipeline and
   are the unit of GTM forecasting.
+provenance:
+  author: revops-team
+  source: domain-expert
+  confidence: 0.9
+  created: 2026-02-22
+status: stable
 ---
 
 ## Attributes
@@ -43,6 +49,10 @@ champion: -> Contact [optional]
 blockers: list<string>
   | Known obstacles to closing (budget freeze, competing
   | priority, technical concern, etc.)
+
+## Identity
+
+An Opportunity is identified by account context, name, and close_date.
 
 ## Notes
 

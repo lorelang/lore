@@ -1,0 +1,20 @@
+---
+index: true
+generated: 2026-02-22
+---
+
+## Overview
+
+Relationship definitions (5 total across 1 files).
+
+## Contents
+
+- `delivery.lore` — Implementation Delivery: HAS_STAKEHOLDER, REQUIRES_INTEGRATION, HAS_WORKSTREAM, OWNS_WORKSTREAM, BLOCKED_BY
+
+## Relationship Map
+
+- Client --[HAS_STAKEHOLDER]--> Stakeholder
+- Client --[REQUIRES_INTEGRATION]--> Integration
+- Client --[HAS_WORKSTREAM]--> Workstream
+- Stakeholder --[OWNS_WORKSTREAM]--> Workstream
+- Workstream --[BLOCKED_BY]--> Integration

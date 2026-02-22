@@ -1,0 +1,33 @@
+---
+entity: CareEpisode
+description: A bounded care journey from referral to follow-up completion.
+provenance:
+  author: care-navigation-team
+  source: domain-expert
+  confidence: 0.92
+  created: 2026-02-20
+status: stable
+---
+
+## Attributes
+
+episode_id: string [required, unique]
+  | Episode identifier.
+
+status: enum [new, scheduled, in-progress, completed, dropped]
+  | Current episode progression state.
+
+days_to_first_visit: int [0 .. 365]
+  | Elapsed days between referral and first appointment.
+
+adherence_score: float [0.0 .. 1.0]
+  | Best-effort estimate of care plan adherence.
+
+## Identity
+
+Each CareEpisode is identified by episode_id.
+
+## Notes
+
+Episode narrative context from navigator notes is high-value for downstream
+agent decisions and cannot be fully reduced to structured metrics.

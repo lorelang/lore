@@ -6,6 +6,9 @@ Define your domain knowledge in prose. Compile to knowledge graphs, AI agent pro
 
 Lore is designed for teams that need to encode institutional knowledge — the kind of expertise that lives in people's heads, scattered documents, and tribal knowledge — into a format that both humans and AI can reason over.
 
+Lore is **AI-first**: unstructured and semi-structured narrative is the primary source
+of meaning. Structured compilers are best-effort projections of that source.
+
 ```
 ontology/
 ├── lore.yaml              # manifest
@@ -34,6 +37,9 @@ ontology/
 # Install
 pip install -e .
 
+# AI-first domain bootstrap (Lore equivalent of /...:setup)
+lore setup my-domain --domain "B2B Customer Discovery"
+
 # Validate an ontology
 lore validate examples/b2b-saas-gtm/
 
@@ -52,8 +58,34 @@ lore compile examples/b2b-saas-gtm/ -t json -o ontology.json
 # Generate embedding chunks (JSONL)
 lore compile examples/b2b-saas-gtm/ -t embeddings -o chunks.jsonl
 
+# Export interoperable ontology JSON-LD
+lore compile examples/b2b-saas-gtm/ -t jsonld -o ontology.jsonld
+
 # Generate Mermaid ER diagram
 lore compile examples/b2b-saas-gtm/ -t mermaid -o diagram.mmd
+
+# Generate routing indexes and run quality curation
+lore index examples/b2b-saas-gtm/
+lore curate examples/b2b-saas-gtm/
+
+# Run self-improving proposal generation from outcomes
+lore evolve examples/b2b-saas-gtm/
+
+# Distill a meeting transcript into observations (semi-structured claims)
+lore ingest transcript examples/b2b-saas-gtm/ \
+  --input ./meeting.txt \
+  --about Account
+
+# Distill memory exports into observations (adapters: arscontexta|mem0|graphiti)
+lore ingest memory examples/b2b-saas-gtm/ \
+  --adapter mem0 \
+  --input ./memory.json \
+  --about Account
+
+# Review generated proposals (accept/reject)
+lore review examples/b2b-saas-gtm/proposals \
+  --decision accept \
+  --reviewer ontology-curator
 
 # Show statistics
 lore stats examples/b2b-saas-gtm/
@@ -61,6 +93,9 @@ lore stats examples/b2b-saas-gtm/
 # Visualize entity graph
 lore viz examples/b2b-saas-gtm/
 ```
+
+`setup` also accepts alias forms:
+`/setup`, `lore:setup`, `/lore:setup`.
 
 ## File Format
 
@@ -139,15 +174,30 @@ Signal
     └── Champion Departure        @tag: relationship
 ```
 
+### Observations (`.lore` files in `observations/`)
+
+Use optional claim markers to capture semi-structured insight from meetings:
+
+```markdown
+## Discovery Call: Acme
+
+Fact: Acme has 4 regional sales teams and 2 RevOps analysts.
+Belief: Salesforce integration will be phase-1 critical path.
+Value: Security review must complete before pilot rollout.
+Precedent: Last migration failed due to SSO scope gaps.
+```
+
 ## Compilation Targets
 
 | Target       | Output                  | Use Case                           |
 |-------------|-------------------------|------------------------------------|
 | `neo4j`     | Cypher DDL + constraints| Graph database schema              |
 | `json`      | JSON representation     | API consumption, interop           |
+| `jsonld`    | JSON-LD graph           | Semantic-web / ontology interop    |
 | `agent`     | Structured prompt text  | AI agent system prompts            |
 | `embeddings`| JSONL chunks + metadata | Vector store ingestion             |
 | `mermaid`   | Mermaid ER diagram      | Visual documentation               |
+| `palantir`  | Foundry ontology JSON   | Palantir import                    |
 
 ## Design Principles
 
@@ -161,12 +211,41 @@ Signal
 
 The included example (`examples/b2b-saas-gtm/`) models a B2B SaaS company's go-to-market operations for an AI revenue expansion agent. It includes:
 
-- **7 entities:** Account, Contact, Subscription, Product, Opportunity, Interaction, Signal, Usage
-- **12 relationships** with named traversals
-- **11 rules** covering expansion detection, churn risk, and scoring
-- **1 taxonomy** with 20+ signal types
+- **11 entities** including Account, Contact, Subscription, Product, Feature, Competitor, and Play
+- **18 relationships** with named traversals
+- **16 rules** covering expansion detection, churn risk, and scoring
+- **2 taxonomies** with 20+ signal and product categories
 - **15 glossary terms**
 - **3 views** for Account Executives, CSMs, and RevOps
+
+## Example: AI-First Client Learning
+
+The additional example (`examples/ai-first-client-learning/`) shows how to turn
+meeting-derived learning into ontology updates:
+
+- Observations contain rich prose plus optional `Fact:`, `Belief:`, `Value:`, `Precedent:` claims
+- Outcomes close the loop with `Takeaway:` and `Ref:` markers
+- `lore evolve` runs in `review-required` mode for human-in-the-loop governance
+
+## Example: Implementation Kickoff Intelligence
+
+The example (`examples/implementation-kickoff-intelligence/`) models how delivery
+teams can convert onboarding and kickoff meeting notes into a reusable ontology:
+
+- Captures implementation entities such as Client, Stakeholder, Integration, and Workstream
+- Includes traversals like `onboarding-risk-path` and `sponsor-gap-path` for agent routing
+- Encodes recurring delivery risk rules with narrative-first conditions and actions
+- Uses observation claims plus retrospective outcomes to evolve onboarding playbooks
+
+## Example: Support Intelligence Loop
+
+The example (`examples/support-intelligence-loop/`) shows a voice-of-customer
+loop for support and retention workflows:
+
+- Links Account, SupportCase, Conversation, and IssueTheme into a support graph
+- Uses recurring signal rules to escalate churn-risk patterns from unstructured support narrative
+- Demonstrates taxonomy-driven theme normalization without losing conversational context
+- Closes the loop with outcomes and takeaways that can feed `lore evolve`
 
 ## License
 

@@ -1,0 +1,16 @@
+---
+taxonomy: LearningType
+applied_to: Engagement.channel
+description: Categories used when tagging meeting-derived learning signals.
+---
+
+Learning Signal
+├── Technical Constraint      @tag: implementation
+├── Procurement Constraint    @tag: commercial
+├── Adoption Momentum         @tag: adoption
+└── Expansion Intent          @tag: expansion
+
+## Inheritance Rules
+
+If a learning signal is tagged as Expansion Intent and includes a named champion,
+it should also inherit Adoption Momentum unless outcomes prove otherwise.

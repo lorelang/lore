@@ -3,7 +3,7 @@ import pytest
 from lore.validator import validate, Severity, Diagnostic
 from lore.models import (
     Ontology, OntologyManifest, Entity, Attribute, Relationship,
-    RelationshipFile, Rule, RuleFile, Taxonomy, TaxonomyNode,
+    RelationshipFile, Traversal, Rule, RuleFile, Taxonomy, TaxonomyNode,
     Glossary, GlossaryEntry, View,
 )
 
@@ -149,6 +149,26 @@ class TestRelationshipValidation:
         diags = validate(ont)
         assert any("unknown entity 'Unknown'" in d.message for d in _errors(diags))
 
+    def test_unknown_cardinality_warning(self):
+        ont = _make_ontology(
+            manifest=OntologyManifest(name="test", version="1.0"),
+            entities=[
+                Entity(name="Foo", attributes=[Attribute(name="id", type="string")]),
+                Entity(name="Bar", attributes=[Attribute(name="id", type="string")]),
+            ],
+            relationship_files=[RelationshipFile(
+                domain="test",
+                relationships=[Relationship(
+                    name="TEST_REL",
+                    from_entity="Foo",
+                    to_entity="Bar",
+                    cardinality="zero-to-many",
+                )],
+            )],
+        )
+        diags = validate(ont)
+        assert any("unknown cardinality" in d.message for d in _warnings(diags))
+
 
 class TestRuleValidation:
     def test_duplicate_rules(self):
@@ -186,6 +206,18 @@ class TestRuleValidation:
         diags = validate(ont)
         assert any("no applies_to" in d.message for d in _infos(diags))
 
+    def test_rule_unknown_severity(self):
+        ont = _make_ontology(
+            manifest=OntologyManifest(name="test", version="1.0"),
+            entities=[Entity(name="Foo", attributes=[Attribute(name="id", type="string")])],
+            rule_files=[RuleFile(
+                domain="test",
+                rules=[Rule(name="my-rule", applies_to="Foo", severity="urgent")],
+            )],
+        )
+        diags = validate(ont)
+        assert any("unknown severity" in d.message for d in _warnings(diags))
+
 
 class TestTaxonomyValidation:
     def test_empty_taxonomy(self):
@@ -216,6 +248,19 @@ class TestTaxonomyValidation:
         diags = validate(ont)
         assert any("unknown entity 'NonExistent'" in d.message for d in _warnings(diags))
 
+    def test_taxonomy_unknown_attribute(self):
+        ont = _make_ontology(
+            manifest=OntologyManifest(name="test", version="1.0"),
+            entities=[Entity(name="Account", attributes=[Attribute(name="id", type="string")])],
+            taxonomies=[Taxonomy(
+                name="Types",
+                applied_to="Account.category",
+                root=TaxonomyNode(name="Root", children=[TaxonomyNode(name="Child")]),
+            )],
+        )
+        diags = validate(ont)
+        assert any("unknown attribute" in d.message for d in _warnings(diags))
+
 
 class TestViewValidation:
     def test_view_no_entities(self):
@@ -233,6 +278,57 @@ class TestViewValidation:
         )
         diags = validate(ont)
         assert any("no Key Questions" in d.message for d in _infos(diags))
+
+    def test_view_unknown_references(self):
+        ont = _make_ontology(
+            manifest=OntologyManifest(name="test", version="1.0"),
+            entities=[Entity(name="Account", attributes=[Attribute(name="id", type="string")])],
+            views=[View(
+                name="Bad View",
+                entities=["UnknownEntity"],
+                relationships=["NO_REL"],
+                rules=["NO_RULE"],
+                key_questions=["Q?"],
+            )],
+        )
+        diags = validate(ont)
+        warnings = _warnings(diags)
+        assert any("unknown entity" in d.message for d in warnings)
+        assert any("unknown relationship/traversal" in d.message for d in warnings)
+        assert any("unknown rule" in d.message for d in warnings)
+
+    def test_view_prose_placeholders(self):
+        ont = _make_ontology(
+            manifest=OntologyManifest(name="test", version="1.0"),
+            entities=[
+                Entity(name="Account", attributes=[Attribute(name="id", type="string")]),
+                Entity(name="Contact", attributes=[Attribute(name="id", type="string")]),
+            ],
+            relationship_files=[
+                RelationshipFile(
+                    domain="Commercial",
+                    relationships=[Relationship(name="HAS_CONTACT", from_entity="Account", to_entity="Contact")],
+                    traversals=[Traversal(name="account-contact", path="Account -[HAS_CONTACT]-> Contact")],
+                )
+            ],
+            rule_files=[
+                RuleFile(
+                    domain="Scoring",
+                    rules=[Rule(name="account-score", applies_to="Account")],
+                )
+            ],
+            views=[View(
+                name="Prose",
+                entities=["All entities with all attributes"],
+                relationships=["All commercial relationships", "All traversals"],
+                rules=["All scoring rules"],
+                key_questions=["Q?"],
+            )],
+        )
+        warnings = _warnings(validate(ont))
+        assert not any("unknown entity" in d.message for d in warnings)
+        assert not any("unknown relationship/traversal" in d.message for d in warnings)
+        assert not any("unknown rule" in d.message for d in warnings)
 
 
 class TestGlossaryValidation:

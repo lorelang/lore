@@ -43,7 +43,7 @@ def compile_embeddings(ontology: Ontology) -> str:
         ]
         if entity.attributes:
             attr_list = ", ".join(
-                f"{a.name} ({a.type})" for a in entity.attributes
+                f"{a.name} ({_attr_label(a)})" for a in entity.attributes
             )
             text_parts.append(f"Attributes: {attr_list}")
 
@@ -51,7 +51,7 @@ def compile_embeddings(ontology: Ontology) -> str:
         if entity.attributes:
             attr_text = f"Attributes of {entity.name}:\n"
             for a in entity.attributes:
-                attr_text += f"- {a.name} ({a.type}): {a.description}\n"
+                attr_text += f"- {a.name} ({_attr_label(a)}): {a.description}\n"
             chunks.append({
                 "id": f"entity:{entity.name}:attributes",
                 "type": "entity_attributes",
@@ -192,12 +192,28 @@ def compile_embeddings(ontology: Ontology) -> str:
             if of.status:
                 obs_meta["status"] = of.status
             obs_meta["source"] = str(of.source_file)
+            obs_text_parts = [f"Observation: {obs.heading}", obs.prose]
+            if obs.claims:
+                for claim in obs.claims:
+                    obs_text_parts.append(f"{claim.kind.title()}: {claim.text}")
+
             chunks.append({
                 "id": f"observation:{of.name}:{obs.heading}",
                 "type": "observation",
-                "text": f"Observation: {obs.heading}\n{obs.prose}",
+                "text": "\n".join(p for p in obs_text_parts if p),
                 "metadata": obs_meta,
             })
+            for idx, claim in enumerate(obs.claims, 1):
+                chunks.append({
+                    "id": f"observation:{of.name}:{obs.heading}:claim:{idx}",
+                    "type": "observation_claim",
+                    "text": f"{claim.kind.title()} claim for {obs.heading}: {claim.text}",
+                    "metadata": {
+                        **obs_meta,
+                        "claim_kind": claim.kind,
+                        "observation_heading": obs.heading,
+                    },
+                })
 
     # Outcome chunks (one per outcome)
     for of in ontology.outcome_files:
@@ -273,3 +289,10 @@ def _chunk_taxonomy(
 
         for child in node.children:
             _chunk_taxonomy(child, current_path, taxonomy_name, chunks)
+
+
+def _attr_label(attr) -> str:
+    """Render an attribute type with enum details when available."""
+    if attr.type == "enum" and attr.enum_values:
+        return f"enum [{', '.join(attr.enum_values)}]"
+    return attr.type

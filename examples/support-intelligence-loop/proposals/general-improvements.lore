@@ -1,0 +1,31 @@
+---
+proposal: General improvements
+provenance:
+  source: derived
+  confidence: 0.8
+status: proposed
+review_required: true
+review_state: pending
+---
+
+## Summary
+
+Takeaways that don't map to a specific rule or entity.
+Based on 4 takeaway(s).
+
+## Takeaways
+
+- onboarding-friction recurrence should trigger proactive success outreach before renewal window
+- add resolution ownership clarity as a first-class support case attribute candidate
+- p1 reopen clusters around a single integration path should auto-trigger incident review
+- map integration debt themes directly to roadmap and reliability planning workflows
+
+## Source Outcomes
+
+- DeltaGrid reliability escalation - correct
+- OrbitPay intervention - partially correct
+
+## References
+
+- observations/week7-voc-synthesis.lore#deltagrid-reliability-complaints-are-concentrated-in-one-integration-path
+- observations/week7-voc-synthesis.lore#orbitpay-churn-risk-appears-through-repeated-onboarding-friction

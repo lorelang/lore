@@ -1,0 +1,22 @@
+---
+domain: Care Navigation
+description: Relationships connecting cohorts, episodes, and providers.
+---
+
+## HAS_EPISODE
+  from: PatientCohort -> to: CareEpisode
+  cardinality: one-to-many
+  | A cohort contains many care episodes.
+
+## ASSIGNED_TO
+  from: CareEpisode -> to: Provider
+  cardinality: many-to-one
+  | Each episode has a primary provider assignment.
+
+  properties:
+    assigned_on: date
+      | Date assignment became active.
+
+## Traversal: access-delay-path
+  path: PatientCohort -[HAS_EPISODE]-> CareEpisode -[ASSIGNED_TO]-> Provider
+  | Use to diagnose care access delays by cohort and provider constraints.

@@ -3,7 +3,7 @@ import pytest
 from pathlib import Path
 from lore.models import (
     Ontology, OntologyManifest, Entity, Attribute,
-    Rule, RuleFile, Outcome, OutcomeFile,
+    Rule, RuleFile, Outcome, OutcomeFile, EvolutionConfig,
 )
 from lore.evolution import evolve, _group_takeaways, _slugify, _compute_confidence
 
@@ -77,6 +77,38 @@ class TestEvolveBasic:
         out = tmp_path / "deep" / "nested" / "proposals"
         proposals = evolve(ont, out)
         assert out.exists()
+
+    def test_evolution_closed_generates_no_proposals(self, tmp_path):
+        ont = Ontology(
+            manifest=OntologyManifest(
+                name="test",
+                version="1.0",
+                evolution=EvolutionConfig(proposals="closed"),
+            ),
+            outcome_files=[OutcomeFile(
+                name="Retro",
+                outcomes=[Outcome(heading="R", prose=".", takeaways=["fix it"])],
+            )],
+        )
+        proposals = evolve(ont, tmp_path / "proposals")
+        assert proposals == []
+
+    def test_evolution_review_required_marks_proposals(self, tmp_path):
+        ont = Ontology(
+            manifest=OntologyManifest(
+                name="test",
+                version="1.0",
+                evolution=EvolutionConfig(proposals="review-required"),
+            ),
+            outcome_files=[OutcomeFile(
+                name="Retro",
+                outcomes=[Outcome(heading="R", prose=".", takeaways=["fix it"])],
+            )],
+        )
+        proposals = evolve(ont, tmp_path / "proposals")
+        assert len(proposals) >= 1
+        content = Path(proposals[0]["path"]).read_text()
+        assert "review_required: true" in content
 
 
 class TestEvolveGrouping:

@@ -1,0 +1,17 @@
+---
+taxonomy: VoiceOfCustomerTheme
+applied_to: IssueTheme.category
+description: Theme hierarchy for support-derived customer intelligence.
+---
+
+Issue Theme
+├── Product Gap          @tag: roadmap
+├── Onboarding Friction  @tag: activation
+├── Performance Risk     @tag: reliability
+├── Integration Debt     @tag: implementation
+└── Billing Ambiguity    @tag: finance
+
+## Inheritance Rules
+
+If a theme is tagged Onboarding Friction and appears with negative sentiment in
+multiple enterprise accounts, it should also inherit Product Gap until outcomes indicate otherwise.

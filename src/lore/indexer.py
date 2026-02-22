@@ -25,10 +25,19 @@ Brief description of what's in this directory.
 Natural language routing hints for agents.
 """
 from __future__ import annotations
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Optional
 from .models import Ontology
+
+
+def _parse_iso_date(value: str) -> date | None:
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError:
+        return None
 
 
 def generate_root_index(ontology: Ontology, root_dir: Path,
@@ -59,6 +68,7 @@ def generate_root_index(ontology: Ontology, root_dir: Path,
     n_rules = len(ontology.all_rules)
     n_tax = len(ontology.taxonomies)
     n_obs = len(ontology.all_observations)
+    n_claims = len(ontology.all_claims)
     n_outcomes = len(ontology.all_outcomes)
     n_views = len(ontology.views)
     n_glossary = len(ontology.all_glossary_entries)
@@ -67,7 +77,7 @@ def generate_root_index(ontology: Ontology, root_dir: Path,
     lines.append("")
     lines.append(f"- {n_entities} entities, {n_rels} relationships, {n_rules} rules")
     lines.append(f"- {n_tax} taxonomies, {n_glossary} glossary terms")
-    lines.append(f"- {n_obs} observations, {n_outcomes} outcomes")
+    lines.append(f"- {n_obs} observations, {n_claims} claims, {n_outcomes} outcomes")
     lines.append(f"- {n_views} views")
     lines.append("")
 
@@ -104,6 +114,46 @@ def generate_root_index(ontology: Ontology, root_dir: Path,
             n_attrs = len(entity.attributes)
             lines.append(f"- **{entity.name}** ({n_attrs} attrs) — {desc_short}")
         lines.append("")
+
+    lines.append("## Agent-First Reading Order")
+    lines.append("")
+    lines.append("For AI context engineering, read in this order:")
+    lines.append("1. `observations/` and `outcomes/` for latest unstructured domain learning")
+    lines.append("2. `entities/` notes and lifecycle sections for semantic grounding")
+    lines.append("3. `rules/` and `relationships/` for constraint and traversal guardrails")
+    lines.append("4. `taxonomies/` and `glossary/` for normalization and canonical terms")
+    lines.append("")
+
+    if ontology.observation_files or ontology.outcome_files:
+        lines.append("## Recent Learning Signals")
+        lines.append("")
+
+        recent_obs = []
+        for of in ontology.observation_files:
+            parsed = _parse_iso_date(of.date)
+            if parsed:
+                claim_count = sum(len(obs.claims) for obs in of.observations)
+                recent_obs.append((parsed, of.name, of.about, claim_count))
+        recent_obs.sort(key=lambda x: x[0], reverse=True)
+        if recent_obs:
+            lines.append("Recent observations:")
+            for d, name, about, claim_count in recent_obs[:5]:
+                about_str = f" about {about}" if about else ""
+                lines.append(f"- {d.isoformat()} — {name}{about_str} ({claim_count} claims)")
+            lines.append("")
+
+        recent_outcomes = []
+        for of in ontology.outcome_files:
+            parsed = _parse_iso_date(of.date)
+            if parsed:
+                takeaway_count = sum(len(o.takeaways) for o in of.outcomes)
+                recent_outcomes.append((parsed, of.name, takeaway_count))
+        recent_outcomes.sort(key=lambda x: x[0], reverse=True)
+        if recent_outcomes:
+            lines.append("Recent outcomes:")
+            for d, name, takeaway_count in recent_outcomes[:5]:
+                lines.append(f"- {d.isoformat()} — {name} ({takeaway_count} takeaways)")
+            lines.append("")
 
     # Search guide
     lines.append("## Search Guide")
@@ -254,12 +304,14 @@ def _index_observations(ontology: Ontology) -> list[str]:
         fname = of.source_file.name if of.source_file else f"{of.name.lower()}.lore"
         about = f" about {of.about}" if of.about else ""
         date_str = f" ({of.date})" if of.date else ""
+        claim_count = sum(len(obs.claims) for obs in of.observations)
         lines.append(f"- `{fname}` — {of.name}{about}{date_str}: "
-                     f"{len(of.observations)} observations")
+                     f"{len(of.observations)} observations, {claim_count} claims")
 
     lines.extend(["", "## Search Guide", ""])
     lines.append("- To find observations about an entity: `grep -l 'about: EntityName' observations/*.lore`")
     lines.append("- To find recent observations: sort by `date:` field in frontmatter")
+    lines.append("- To find semi-structured signals: `grep -R '^(Fact|Belief|Value|Precedent):' observations/`")
     lines.append("")
     return lines
 

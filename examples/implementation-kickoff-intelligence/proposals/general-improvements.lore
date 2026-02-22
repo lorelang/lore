@@ -1,0 +1,29 @@
+---
+proposal: General improvements
+provenance:
+  source: derived
+  confidence: 0.65
+status: proposed
+review_required: true
+review_state: pending
+---
+
+## Summary
+
+Takeaways that don't map to a specific rule or entity.
+Based on 2 takeaway(s).
+
+## Takeaways
+
+- convert security-review precedent claims into reusable implementation playbooks
+- add cross-system phase 1 scope as a high-priority risk pattern in kickoff synthesis
+
+## Source Outcomes
+
+- Helio security-delay prediction - correct
+- Apex integration-capacity prediction - partially correct
+
+## References
+
+- observations/week1-kickoff-signals.lore#helio-health-has-security-first-procurement-motion
+- observations/week1-kickoff-signals.lore#apex-logistics-integration-scope-is-wider-than-expected

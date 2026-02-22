@@ -1,0 +1,23 @@
+---
+observations: Play Execution Learnings
+about: Play
+observed_by: play-quality-agent
+date: 2026-02-21
+confidence: 0.68
+status: proposed
+provenance:
+  author: play-quality-agent
+  source: ai-generated
+  confidence: 0.68
+  created: 2026-02-21
+---
+
+## Context-rich play handoffs outperform generic recommendations
+
+Play execution improved when recommendations included triggering evidence and
+stakeholder context, not just a play label.
+
+Fact: Plays with evidence-linked context produced higher execution follow-through.
+Belief: Recommendation quality depends on contextual narrative, not taxonomy match alone.
+Value: Human operators need clear "why now" context to trust agent suggestions.
+Precedent: Prior rollout reviews showed higher adoption for evidence-backed play prompts.

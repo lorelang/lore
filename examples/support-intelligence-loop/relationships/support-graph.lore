@@ -1,0 +1,32 @@
+---
+domain: Support Intelligence Graph
+description: Core support relationships connecting accounts, cases, conversations, and themes.
+---
+
+## HAS_CASE
+  from: Account -> to: SupportCase
+  cardinality: one-to-many
+  | Accounts generate one or more support cases.
+
+## HAS_CONVERSATION
+  from: SupportCase -> to: Conversation
+  cardinality: one-to-many
+  | Conversations associated with a case timeline.
+
+## MENTIONS_THEME
+  from: Conversation -> to: IssueTheme
+  cardinality: many-to-many
+  | Conversation segments can mention one or more issue themes.
+
+## LINKED_TO_THEME
+  from: SupportCase -> to: IssueTheme
+  cardinality: many-to-many
+  | Case-level rollup of themes inferred from conversations.
+
+## Traversal: churn-risk-signal-path
+  path: Account -[HAS_CASE]-> SupportCase -[HAS_CONVERSATION]-> Conversation -[MENTIONS_THEME]-> IssueTheme
+  | Finds narrative pathways that correlate with retention risk.
+
+## Traversal: repeat-friction-path
+  path: Account -[HAS_CASE]-> SupportCase -[LINKED_TO_THEME]-> IssueTheme
+  | Detects recurring theme clusters across recent cases.

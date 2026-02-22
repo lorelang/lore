@@ -1,0 +1,25 @@
+---
+proposal: Adjust rule: usage-decline-alert
+provenance:
+  source: derived
+  confidence: 0.5
+status: proposed
+---
+
+## Summary
+
+Multiple outcomes suggest adjustments to the 'usage-decline-alert' rule.
+Based on 1 takeaway(s) from 1 outcome(s).
+
+## Takeaways
+
+- the usage-decline-alert rule needs seasonal adjustment for cyclical industries
+
+## Source Outcomes
+
+- Beta Corp churn risk — false positive
+
+## References
+
+- observations/signal-quality-review.lore#usage-decline-signals-need-industry-context
+- observations/q2-account-signals.lore#beta-corp-usage-decline-looks-seasonal

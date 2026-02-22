@@ -1,0 +1,32 @@
+---
+index: true
+generated: 2026-02-22
+---
+
+## Overview
+
+Business rules (16 total across 3 files).
+
+## Contents
+
+- `churn.lore` > **champion-departure-alert** (applies to: Account) [critical]
+- `churn.lore` > **usage-decline-alert** (applies to: Account) [warning]
+- `churn.lore` > **competitor-threat** (applies to: Account) [critical]
+- `churn.lore` > **renewal-risk-scoring** (applies to: Subscription) [warning]
+- `expansion.lore` > **multi-signal-expansion** (applies to: Account) [info]
+- `expansion.lore` > **whitespace-analysis** (applies to: Account) [info]
+- `expansion.lore` > **seat-expansion-trigger** (applies to: Subscription) [info]
+- `expansion.lore` > **tier-upgrade-readiness** (applies to: Account) [info]
+- `scoring.lore` > **account-health-score** (applies to: Account) [info]
+- `scoring.lore` > **contact-engagement-score** (applies to: Contact) [info]
+- `scoring.lore` > **champion-strength** (applies to: Contact) [info]
+- `scoring.lore` > **adoption-score** (applies to: Usage) [info]
+- `scoring.lore` > **usage-trend** (applies to: Usage) [info]
+- `scoring.lore` > **seat-utilization** (applies to: Subscription) [info]
+- `scoring.lore` > **opportunity-probability** (applies to: Opportunity) [info]
+- `scoring.lore` > **active-seats** (applies to: Subscription) [info]
+
+## Search Guide
+
+- To find rules for an entity: `grep -l 'applies_to: EntityName' rules/*.lore`
+- To find rules by severity: `grep -l 'severity: critical' rules/*.lore`

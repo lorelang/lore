@@ -1,0 +1,24 @@
+---
+view: Care Navigator
+audience: Clinical operations and patient navigation teams
+description: Unstructured-first view for weekly care coordination decisions.
+---
+
+## Entities
+- PatientCohort (all)
+- CareEpisode (all)
+- Provider (capacity_band, network_status)
+
+## Relationships
+- HAS_EPISODE
+- ASSIGNED_TO
+- access-delay-path
+
+## Rules
+- access-delay-alert
+- adherence-risk-watch
+
+## Key Questions
+- Which episodes are likely to miss timely first visits?
+- What repeating barriers should become explicit process rules?
+- Where are provider constraints driving cohort-level risk?

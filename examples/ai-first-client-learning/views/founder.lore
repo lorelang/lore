@@ -1,0 +1,29 @@
+---
+view: Founder Learning Loop
+audience: Founders and first GTM hires
+description: Prioritizes unstructured client learning and high-leverage decisions.
+---
+
+## Entities
+- Client (all)
+- Stakeholder (all)
+- Engagement (summary, signal_strength)
+
+## Relationships
+- HAS_STAKEHOLDER
+- HAS_ENGAGEMENT
+- INVOLVES
+- decision-risk-path
+
+## Rules
+- security-gate-alert
+- champion-readiness-score
+
+## Key Questions
+- What did we learn this week that should change onboarding or pricing?
+- Which blockers are repeating across prospects?
+- Which precedents should become explicit rules?
+
+## Not In Scope
+
+Detailed billing and ERP mappings.

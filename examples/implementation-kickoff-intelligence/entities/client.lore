@@ -1,0 +1,37 @@
+---
+entity: Client
+description: A customer organization moving through onboarding or implementation.
+provenance:
+  author: implementation-ops
+  source: domain-expert
+  confidence: 0.91
+  created: 2026-02-22
+status: stable
+---
+
+## Attributes
+
+name: string [required, unique]
+  | Canonical company name.
+
+domain: string [required, unique]
+  | Primary client domain.
+
+segment: enum [smb, mid-market, enterprise]
+  | Commercial segment used for implementation staffing.
+
+procurement_motion: enum [standard, security-first, legal-first]
+  | Dominant buying process observed in kickoff discussions.
+
+## Identity
+
+A Client is uniquely identified by legal name and primary domain.
+
+## Lifecycle
+
+Contract signed -> kickoff -> technical validation -> pilot -> go-live -> expansion.
+
+## Notes
+
+Narrative context from kickoff calls frequently predicts timeline risk before
+structured project trackers are updated.

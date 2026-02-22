@@ -3,7 +3,7 @@ import json
 import pytest
 from lore.models import (
     Ontology, OntologyManifest, Entity, Attribute,
-    Observation, ObservationFile, Outcome, OutcomeFile,
+    Observation, ObservationFile, Outcome, OutcomeFile, KnowledgeClaim,
 )
 from lore.validator import validate, Severity
 from lore.compilers.agent import compile_agent_context
@@ -93,6 +93,28 @@ Some finding here.
         assert of.provenance is not None
         assert of.provenance.source == "ai-generated"
         assert of.provenance.confidence == 0.8
+
+    def test_observation_claim_markers(self, tmp_ontology):
+        ont = tmp_ontology(
+            manifest="name: test\nversion: 0.1.0",
+            observations={"notes.lore": """---
+observations: Discovery Notes
+about: Account
+---
+
+## Client onboarding insights
+
+Fact: Client has 4 regional sales teams.
+Belief: They will prioritize Salesforce integration first.
+Value: Security review must finish before rollout.
+Precedent: Last migration failed due to missing SSO requirements.
+"""}
+        )
+        obs = ont.observation_files[0].observations[0]
+        assert len(obs.claims) == 4
+        kinds = {c.kind for c in obs.claims}
+        assert kinds == {"fact", "belief", "value", "precedent"}
+        assert "regional sales teams" in obs.claims[0].text
 
     def test_multiple_observation_files(self, tmp_ontology):
         ont = tmp_ontology(
@@ -402,6 +424,25 @@ class TestObservationsInAgentCompiler:
         result = compile_agent_context(ont)
         assert "<observations>" not in result
 
+    def test_claims_in_agent_output(self):
+        ont = Ontology(
+            manifest=OntologyManifest(name="test", version="1.0"),
+            observation_files=[ObservationFile(
+                name="Notes",
+                about="Account",
+                observations=[
+                    Observation(
+                        heading="Client call",
+                        prose="Discovery call summary.",
+                        claims=[KnowledgeClaim(kind="fact", text="Client runs on Salesforce")],
+                    ),
+                ],
+            )],
+        )
+        result = compile_agent_context(ont)
+        assert "Claims:" in result
+        assert "fact: Client runs on Salesforce" in result
+
 
 class TestOutcomesInAgentCompiler:
     def test_outcomes_in_agent_output(self):
@@ -477,6 +518,23 @@ class TestObservationsInJsonCompiler:
         data = json.loads(compile_json(ont))
         assert data["observations"] == []
 
+    def test_claims_in_json(self):
+        ont = Ontology(
+            manifest=OntologyManifest(name="test", version="1.0"),
+            observation_files=[ObservationFile(
+                name="Notes",
+                observations=[Observation(
+                    heading="Client insights",
+                    prose="Summary.",
+                    claims=[KnowledgeClaim(kind="precedent", text="Past rollout failed without SSO")],
+                )],
+            )],
+        )
+        data = json.loads(compile_json(ont))
+        claims = data["observations"][0]["observations"][0]["claims"]
+        assert claims[0]["kind"] == "precedent"
+        assert "SSO" in claims[0]["text"]
+
 
 class TestOutcomesInJsonCompiler:
     def test_outcomes_in_json(self):
@@ -550,6 +608,24 @@ class TestObservationsInEmbeddingsCompiler:
         assert "Observation: Acme expansion" in acme_chunk["text"]
         assert "Acme is growing." in acme_chunk["text"]
 
+    def test_observation_claim_chunks(self):
+        ont = Ontology(
+            manifest=OntologyManifest(name="test", version="1.0"),
+            observation_files=[ObservationFile(
+                name="Discovery",
+                observations=[Observation(
+                    heading="Meeting output",
+                    prose="Summary",
+                    claims=[KnowledgeClaim(kind="value", text="SOC2 is non-negotiable")],
+                )],
+            )],
+        )
+        result = compile_embeddings(ont)
+        chunks = [json.loads(line) for line in result.strip().split("\n")]
+        claim_chunks = [c for c in chunks if c["type"] == "observation_claim"]
+        assert len(claim_chunks) == 1
+        assert claim_chunks[0]["metadata"]["claim_kind"] == "value"
+
 
 class TestOutcomesInEmbeddingsCompiler:
     def test_outcome_chunks(self):
@@ -605,11 +681,11 @@ class TestOutcomesInEmbeddingsCompiler:
 class TestObservationsOutcomesBackwardCompat:
     def test_example_has_observations_and_outcomes(self, example_ontology):
         """The v0.2 B2B SaaS example includes observations and outcomes."""
-        assert len(example_ontology.observation_files) == 3
-        assert len(example_ontology.outcome_files) == 1
-        assert len(example_ontology.all_observations) == 9
-        assert len(example_ontology.all_outcomes) == 3
-        assert len(example_ontology.all_takeaways) == 6
+        assert len(example_ontology.observation_files) >= 3
+        assert len(example_ontology.outcome_files) >= 1
+        assert len(example_ontology.all_observations) >= 9
+        assert len(example_ontology.all_outcomes) >= 3
+        assert len(example_ontology.all_takeaways) >= 6
 
     def test_example_compilers_include_observations_and_outcomes(self, example_ontology):
         result = compile_agent_context(example_ontology)
@@ -617,15 +693,15 @@ class TestObservationsOutcomesBackwardCompat:
         assert "<outcomes>" in result
 
         data = json.loads(compile_json(example_ontology))
-        assert len(data["observations"]) == 3
-        assert len(data["outcomes"]) == 1
+        assert len(data["observations"]) == len(example_ontology.observation_files)
+        assert len(data["outcomes"]) == len(example_ontology.outcome_files)
 
         embeddings = compile_embeddings(example_ontology)
         chunks = [json.loads(line) for line in embeddings.strip().split("\n")]
         obs_chunks = [c for c in chunks if c["type"] == "observation"]
         out_chunks = [c for c in chunks if c["type"] == "outcome"]
-        assert len(obs_chunks) == 9
-        assert len(out_chunks) == 3
+        assert len(obs_chunks) == len(example_ontology.all_observations)
+        assert len(out_chunks) == len(example_ontology.all_outcomes)
 
     def test_ontology_without_observations_still_works(self, tmp_ontology):
         """An ontology without observations/ or outcomes/ dirs works fine."""

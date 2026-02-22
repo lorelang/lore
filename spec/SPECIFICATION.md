@@ -43,6 +43,9 @@ Lore is **not a runtime query engine**. If you need real-time graph queries, com
 7. **Every feature is opt-in.** No provenance block? Fine. No observations directory? Fine. The ontology still works.
 8. **Extensible by default.** Custom compilers, custom curators, and custom directories are first-class. The core is small; the ecosystem grows through plugins.
 
+In practical terms: Lore is **unstructured-first for AI context**. Structured
+artifacts are best-effort projections of the narrative source.
+
 ## File Types
 
 Lore recognizes eight file types, determined by their location in the directory structure:
@@ -259,19 +262,30 @@ audience: Who this view is for
 ## Entities
 - EntityA (attribute subset or "all")
 - EntityB (specific attributes: attr1, attr2)
+- All entities with all attributes
 
 ## Relationships
 - RELATIONSHIP_NAME
 - traversal-name
+- traversal-name traversal
+- All commercial relationships
+- All relationships and traversals
 
 ## Rules
 - rule-name-1
 - rule-name-2
+- All scoring rules
+- All rules
 
 ## Key Questions
 - What question can this view answer?
 - Another question?
 ```
+
+Views support prose placeholders so authors can stay narrative-first while
+still giving deterministic scope to compilers/validators. Supported examples:
+`All entities ...`, `All <domain> relationships`, `All traversals`,
+`All relationships and traversals`, `All <domain> rules`, `All rules`.
 
 ### Observations (v0.2)
 
@@ -310,7 +324,15 @@ patterns over the past 30 days:
 | `date`            | date   | When the observation was made              |
 | `confidence`      | float  | Confidence level (0.0-1.0)                 |
 
-Each `##` section is one observation. The body is pure prose.
+Each `##` section is one observation. The body is primarily prose, with optional
+semi-structured claim markers:
+
+- `Fact:` — concrete, verifiable domain statement
+- `Belief:` — likely but uncertain interpretation
+- `Value:` — preference, policy, or non-negotiable principle
+- `Precedent:` — historical pattern that should influence future decisions
+
+These markers are extracted by the parser and preserved in JSON/agent/embedding outputs.
 
 ### Outcomes (v0.2)
 
@@ -384,6 +406,7 @@ The Lore toolchain compiles `.lore` files to:
 |-------------|-------------------------|------------------------------------|
 | `neo4j`     | Cypher DDL + constraints| Graph database schema              |
 | `json`      | JSON representation     | API consumption, interop           |
+| `jsonld`    | JSON-LD graph           | Semantic-web and ontology interop  |
 | `agent`     | Structured prompt text  | AI agent system prompts            |
 | `embeddings`| Chunked text + metadata | Vector store ingestion             |
 | `mermaid`   | Mermaid diagram code    | Visual documentation               |
@@ -753,6 +776,11 @@ INDEX.lore files have `index: true` in their frontmatter and are excluded from o
 
 ```
 lore init <dir>                        Scaffold a new ontology
+lore setup <dir>                       AI-first domain setup scaffold
+lore ingest transcript <dir> --input F --about E
+                                       Distill transcript into observations
+lore ingest memory <dir> --adapter A --input F --about E
+                                       Distill memory export into observations
 lore validate <dir>                    Validate ontology for errors
 lore compile <dir> -t <target>         Compile to target format
 lore compile <dir> -t agent --view V   Compile scoped to a view
@@ -761,12 +789,16 @@ lore stats <dir>                       Show ontology statistics
 lore viz <dir>                         ASCII entity relationship graph
 lore index <dir>                       Generate INDEX.lore routing files
 lore evolve <dir>                      Generate proposals from outcome takeaways
+lore review <path> --decision D --reviewer R
+                                       Accept/reject proposal files
 lore curate <dir>                      Run all curation health checks
 lore curate <dir> --job <name>         Run a specific curation job
 lore curate <dir> --dry-run            Report only, suppress suggestions
 ```
 
-Compilation targets: `neo4j`, `json`, `agent`, `embeddings`, `mermaid`, `palantir`
+`setup` aliases: `/setup`, `lore:setup`, `/lore:setup`
+
+Compilation targets: `neo4j`, `json`, `jsonld`, `agent`, `embeddings`, `mermaid`, `palantir`
 
 Curation jobs: `staleness`, `coverage`, `consistency`, `index`, `summarize`, `all`
 

@@ -4,6 +4,12 @@ description: >
   A company that is a customer, prospect, or former customer.
   Accounts are the primary commercial unit — all revenue,
   contracts, and engagement roll up to the account level.
+provenance:
+  author: revops-team
+  source: domain-expert
+  confidence: 0.93
+  created: 2026-02-22
+status: stable
 ---
 
 ## Attributes

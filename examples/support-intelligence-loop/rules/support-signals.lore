@@ -1,0 +1,35 @@
+---
+domain: Support Signal Rules
+description: Rules for escalating recurring support narrative into retention and roadmap action.
+---
+
+## recurring-negative-theme-alert
+  applies_to: Account
+  severity: critical
+  trigger: Weekly voice-of-customer synthesis
+
+  condition:
+    count_recent_cases(Account, 30d, state != "resolved") > 2
+    AND recurring_negative_sentiment(Account, "onboarding-friction")
+
+  action:
+    Create retention-risk alert for customer success
+    Attach supporting conversation excerpts and theme precedents
+
+  Narrative support signals can precede renewal risk by several weeks.
+
+## p1-reopen-watch
+  applies_to: SupportCase
+  severity: warning
+  trigger: Case state changes to reopened
+  outputs: SupportCase.state
+
+  condition:
+    SupportCase.priority in ["p1", "p2"]
+    AND SupportCase.reopened_count > 1
+
+  action:
+    Escalate to support manager
+    Trigger cross-functional incident review if theme recurrence is high
+
+  Reopened high-priority cases are a leading indicator of trust erosion.

@@ -1,0 +1,26 @@
+---
+proposal: Review entity: Client
+provenance:
+  source: derived
+  confidence: 0.5
+status: proposed
+review_required: true
+review_state: pending
+---
+
+## Summary
+
+Multiple outcomes reference the 'Client' entity.
+Based on 1 takeaway(s) from 1 outcome(s).
+
+## Takeaways
+
+- include security artifact ownership in the default kickoff template for regulated clients
+
+## Source Outcomes
+
+- Helio security-delay prediction - correct
+
+## References
+
+- observations/week1-kickoff-signals.lore#helio-health-has-security-first-procurement-motion

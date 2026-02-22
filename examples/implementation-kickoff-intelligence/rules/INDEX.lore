@@ -1,0 +1,18 @@
+---
+index: true
+generated: 2026-02-22
+---
+
+## Overview
+
+Business rules (2 total across 1 files).
+
+## Contents
+
+- `kickoff.lore` > **security-review-critical-path** (applies to: Client) [critical]
+- `kickoff.lore` > **integration-readiness-watch** (applies to: Integration) [warning]
+
+## Search Guide
+
+- To find rules for an entity: `grep -l 'applies_to: EntityName' rules/*.lore`
+- To find rules by severity: `grep -l 'severity: critical' rules/*.lore`

@@ -1,0 +1,19 @@
+---
+index: true
+generated: 2026-02-22
+---
+
+## Overview
+
+Relationship definitions (4 total across 1 files).
+
+## Contents
+
+- `support-graph.lore` — Support Intelligence Graph: HAS_CASE, HAS_CONVERSATION, MENTIONS_THEME, LINKED_TO_THEME
+
+## Relationship Map
+
+- Account --[HAS_CASE]--> SupportCase
+- SupportCase --[HAS_CONVERSATION]--> Conversation
+- Conversation --[MENTIONS_THEME]--> IssueTheme
+- SupportCase --[LINKED_TO_THEME]--> IssueTheme

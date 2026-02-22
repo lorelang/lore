@@ -1,0 +1,13 @@
+---
+index: true
+generated: 2026-02-22
+---
+
+## Overview
+
+Classification hierarchies (2 taxonomies).
+
+## Contents
+
+- `product-catalog.lore` — **ProductCatalog** (applied to: Product.category)
+- `signal-types.lore` — **SignalType** (applied to: Signal.type)

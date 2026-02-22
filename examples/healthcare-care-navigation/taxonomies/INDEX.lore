@@ -1,0 +1,12 @@
+---
+index: true
+generated: 2026-02-22
+---
+
+## Overview
+
+Classification hierarchies (1 taxonomies).
+
+## Contents
+
+- `barriers.lore` — **CareBarrier** (applied to: CareEpisode.status)
