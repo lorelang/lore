@@ -29,7 +29,7 @@ ontology/
 - **JSON/YAML schemas:** Too flat. Can't express inheritance, inference rules, or reasoning paths.
 - **Markdown docs:** Great for humans but no tooling can parse them consistently.
 
-**Lore's approach:** A markdown-like format with just enough structure that tooling can parse it deterministically, but readable enough that domain experts can author and review it directly.
+**Lore's approach:** A markdown-like format with just enough structure that tooling can parse it deterministically, but readable enough that domain experts can author and review it directly. Domain understanding also has to evolve, but humans and AI Agents, Lore comes with opinionated curation workflows for evolution of domain understnading.
 
 ## Quick Start
 
