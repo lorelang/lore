@@ -37,7 +37,7 @@ ontology/
 # Install
 pip install -e .
 
-# AI-first domain bootstrap (Lore equivalent of /...:setup)
+# AI-first domain bootstrap
 lore setup my-domain --domain "B2B Customer Discovery"
 
 # Validate an ontology
