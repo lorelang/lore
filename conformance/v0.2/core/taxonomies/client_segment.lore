@@ -1,0 +1,10 @@
+---
+taxonomy: ClientSegment
+applied_to: Client.segment
+description: Segment taxonomy fixture.
+---
+
+Segment
+├── SMB          @tag: small
+├── Mid-Market   @tag: growth
+└── Enterprise   @tag: strategic

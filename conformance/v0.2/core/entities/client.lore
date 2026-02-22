@@ -1,0 +1,32 @@
+---
+entity: Client
+description: A customer organization represented in the ontology.
+provenance:
+  author: conformance-suite
+  source: imported
+  confidence: 0.95
+  created: 2026-02-22
+status: stable
+---
+
+## Attributes
+
+id: string [required, unique]
+  | Canonical client identifier.
+
+name: string [required]
+  | Display name.
+
+segment: enum [smb, mid-market, enterprise]
+  | Commercial segment.
+
+learning_confidence: float [0.0 .. 1.0]
+  | Confidence that current ontology understanding is correct.
+
+## Identity
+
+A Client is uniquely identified by id.
+
+## Notes
+
+Keep narrative client context in prose while preserving minimal structure.

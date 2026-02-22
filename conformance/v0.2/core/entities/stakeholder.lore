@@ -1,0 +1,32 @@
+---
+entity: Stakeholder
+description: A person influencing client outcomes.
+provenance:
+  author: conformance-suite
+  source: imported
+  confidence: 0.9
+  created: 2026-02-22
+status: stable
+---
+
+## Attributes
+
+id: string [required, unique]
+  | Stakeholder identifier.
+
+name: string [required]
+  | Stakeholder name.
+
+role: string
+  | Buyer, champion, or operator role.
+
+client: -> Client
+  | Parent client.
+
+## Identity
+
+A Stakeholder is uniquely identified by id.
+
+## Notes
+
+Stakeholder meaning is often contextual and should preserve prose nuance.

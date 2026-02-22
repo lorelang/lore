@@ -8,6 +8,37 @@ Frequently asked questions for developers building with or contributing to Lore.
 
 Lore is a human-readable, machine-parseable format (`.lore` files) for defining domain ontologies. Think of it as "Markdown for domain knowledge" — you describe your business domain (entities, relationships, rules, glossary) in structured prose, and Lore compiles it to whatever your systems need: Neo4j schemas, AI agent prompts, embedding chunks, JSON, JSON-LD, Mermaid diagrams, or Palantir Foundry definitions.
 
+### Is Lore a language or just a CLI?
+
+Lorelang is a language. The `lore` CLI is the reference implementation.
+
+Language-level governance assets are in-repo:
+
+- `LANGUAGE.md` (charter + compatibility policy)
+- `conformance/` + `tests/test_language_conformance.py` (behavior contract)
+
+Current stage is intentionally PR-first: contributors can open PRs directly to
+build missing capabilities. PRs are welcome.
+
+### Where are the developer docs?
+
+- `CONTRIBUTING.md`
+- `docs/DEVELOPER_GUIDE.md`
+- `docs/PLUGIN_GUIDE.md`
+- `docs/MEETING_TO_ONTOLOGY.md`
+- `docs/LAUNCH_TOOLING.md`
+
+### Is there a one-command launch check?
+
+Yes:
+
+```bash
+make launch-check
+```
+
+This runs tests, conformance checks, example validation, compile matrix, and
+an end-to-end smoke workflow.
+
 ### How is Lore different from JSON Schema / YAML configs / Protobuf?
 
 Those formats optimize for machines. Lore optimizes for **shared understanding between humans and AI agents**. A `.lore` file reads like documentation but parses like code. It supports freeform prose (`## Notes`, `## Identity`, `## Lifecycle`) alongside structured attributes — because domain knowledge is richer than what fits in a type system.

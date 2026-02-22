@@ -1,0 +1,18 @@
+---
+view: Language Curator
+audience: Language contributors and ontology maintainers
+description: Conformance view using prose placeholders.
+---
+
+## Entities
+- All entities with all attributes
+
+## Relationships
+- All relationships and traversals
+
+## Rules
+- All rules
+
+## Key Questions
+- What changed in language semantics and why?
+- Which learnings should become stable ontology?

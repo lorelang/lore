@@ -1,0 +1,13 @@
+---
+domain: Client Learning
+description: Core relationship and traversal fixture.
+---
+
+## HAS_STAKEHOLDER
+  from: Client -> to: Stakeholder
+  cardinality: one-to-many
+  | A client can have multiple stakeholders.
+
+## Traversal: influence-path
+  path: Client -[HAS_STAKEHOLDER]-> Stakeholder
+  | Follow stakeholders connected to a client when evaluating rollout risk.

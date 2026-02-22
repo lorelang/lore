@@ -46,6 +46,28 @@ Lore is **not a runtime query engine**. If you need real-time graph queries, com
 In practical terms: Lore is **unstructured-first for AI context**. Structured
 artifacts are best-effort projections of the narrative source.
 
+## Language Governance
+
+Lore is treated as a language with explicit governance:
+
+- Language charter: `LANGUAGE.md`
+- Conformance fixtures: `conformance/`
+
+Current mode is PR-first contribution. If something is missing, contributors can
+build it and open a PR. All language-level changes should still update
+conformance fixtures and tests.
+
+## Compatibility Commitments
+
+Lorelang uses semantic versioning at language level:
+
+- `MAJOR`: breaking grammar or semantic changes
+- `MINOR`: additive, backward-compatible language features
+- `PATCH`: clarifications and bug fixes without intended behavior break
+
+For `0.x`, the language remains iterative, but maintainers should still avoid
+silent breaks. Any behavior-impacting change should include migration notes.
+
 ## File Types
 
 Lore recognizes eight file types, determined by their location in the directory structure:
@@ -814,6 +836,9 @@ Versioning is intentionally simple:
 - **Ontology-level**: `version` in `lore.yaml` (semantic versioning).
 - **File-level**: Git handles diffs better than per-file version numbers.
 - **Observation/outcome-level**: `date` field in frontmatter.
+
+Language-level policy and compatibility guarantees are defined in `LANGUAGE.md`.
+Conformance behavior for this spec version is pinned under `conformance/`.
 
 ## Directory Structure
 

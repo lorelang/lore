@@ -1,0 +1,18 @@
+---
+outcomes: Week 2 Retrospective
+reviewed_by: conformance-agent
+date: 2026-02-22
+status: proposed
+provenance:
+  author: conformance-agent
+  source: ai-generated
+  confidence: 0.8
+  created: 2026-02-22
+---
+
+## Security review prediction held
+
+Security packet readiness remained the top gating signal for kickoff commitments.
+
+Takeaway: keep security-gate context explicit in ontology notes and rules
+Ref: observations/week1.lore#security-review-is-recurring-gate

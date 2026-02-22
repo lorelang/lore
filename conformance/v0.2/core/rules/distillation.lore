@@ -1,0 +1,18 @@
+---
+domain: Distillation
+description: Rule semantics fixture.
+---
+
+## promote-high-confidence-learning
+  applies_to: Client
+  severity: info
+  trigger: Weekly ontology review
+
+  condition:
+    Client.learning_confidence >= 0.8
+
+  action:
+    Propose upgrade from proposed to stable
+    Attach supporting observations
+
+  Promotion remains human-reviewed before stable status.

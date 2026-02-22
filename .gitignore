@@ -32,3 +32,6 @@ Thumbs.db
 
 # Compiled lore outputs
 _compiled/
+
+# Private local notes/docs (not for repo)
+local-docs/

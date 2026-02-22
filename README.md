@@ -94,6 +94,17 @@ lore stats examples/b2b-saas-gtm/
 lore viz examples/b2b-saas-gtm/
 ```
 
+## Build Shortcuts
+
+```bash
+make help
+make launch-check
+make dist-check
+```
+
+This gives a single command path for test + conformance + example validation +
+compile matrix + end-to-end smoke checks.
+
 `setup` also accepts alias forms:
 `/setup`, `lore:setup`, `/lore:setup`.
 
@@ -207,6 +218,17 @@ Precedent: Last migration failed due to SSO scope gaps.
 4. **Compiles to anything.** Source format that targets any runtime.
 5. **Prose where meaning is rich, structure where precision matters.** Lore supports both.
 
+## Lorelang as a Language
+
+Lore is launched as a language ecosystem, not just a CLI utility:
+
+- Language charter: `LANGUAGE.md`
+- Conformance fixtures: `conformance/`
+- Conformance tests: `tests/test_language_conformance.py`
+
+PRs are welcome. Current contribution mode is PR-first. Language-level changes should update
+spec + conformance fixtures + conformance tests together.
+
 ## Example: B2B SaaS GTM
 
 The included example (`examples/b2b-saas-gtm/`) models a B2B SaaS company's go-to-market operations for an AI revenue expansion agent. It includes:
@@ -246,6 +268,19 @@ loop for support and retention workflows:
 - Uses recurring signal rules to escalate churn-risk patterns from unstructured support narrative
 - Demonstrates taxonomy-driven theme normalization without losing conversational context
 - Closes the loop with outcomes and takeaways that can feed `lore evolve`
+
+## Contributing
+
+PRs are welcome. If something is missing, build it and open a PR with tests.
+
+See:
+
+- `CONTRIBUTING.md`
+- `docs/DEVELOPER_GUIDE.md`
+- `docs/PLUGIN_GUIDE.md`
+- `docs/MEETING_TO_ONTOLOGY.md`
+- `docs/LAUNCH_TOOLING.md`
+- `docs/VERSIONING_RELEASE.md`
 
 ## License
 

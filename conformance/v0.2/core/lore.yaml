@@ -1,0 +1,7 @@
+name: lorelang-v0-2-core
+version: 0.2.0
+description: Core Lorelang v0.2 conformance fixture.
+domain: Conformance
+evolution:
+  proposals: review-required
+  staleness: 90d

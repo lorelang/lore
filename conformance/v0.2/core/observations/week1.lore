@@ -1,0 +1,22 @@
+---
+observations: Week 1 Learning
+about: Client
+observed_by: conformance-agent
+date: 2026-02-22
+confidence: 0.82
+status: proposed
+provenance:
+  author: conformance-agent
+  source: ai-generated
+  confidence: 0.82
+  created: 2026-02-22
+---
+
+## Security review is recurring gate
+
+Multiple implementation calls referenced security packet delays as the timeline blocker.
+
+Fact: Three clients requested security evidence before pilot.
+Belief: Procurement risk is often framed as technical readiness.
+Value: Teams prioritize predictable launch over rapid scope expansion.
+Precedent: Similar delays repeated across prior enterprise onboarding.
