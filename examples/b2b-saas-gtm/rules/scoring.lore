@@ -1,0 +1,126 @@
+---
+domain: Scoring
+description: >
+  Rules that compute derived scores and metrics across
+  entities. These are the formulas that power health
+  scores, engagement scores, and other composite metrics.
+---
+
+## account-health-score
+  applies_to: Account
+  outputs: Account.health_score
+
+  The health score is a weighted composite of four dimensions:
+
+  - **Product adoption** (30%): Based on usage.adoption_score
+    averaged over last 3 months. Higher adoption = getting
+    more value = healthier.
+
+  - **Engagement quality** (25%): Based on interaction recency,
+    frequency, and sentiment. Weighted toward recent interactions.
+    Executive engagement counts 2x.
+
+  - **Support health** (20%): Inverse of open ticket count and
+    average resolution time. Accounts with many open negative
+    tickets score low.
+
+  - **Commercial signals** (25%): Seat utilization, NRR trend,
+    on-time payments. An expanding account scores high; a
+    contracting one scores low.
+
+  Scores are recalculated daily. A drop of more than 15 points
+  in a single week triggers a CSM alert regardless of absolute score.
+
+## contact-engagement-score
+  applies_to: Contact
+  outputs: Contact.engagement_score
+
+  Based on the contact's interaction history:
+  - Recency: When was their last interaction? (exponential decay)
+  - Frequency: How often do they engage per month?
+  - Depth: Are they just attending meetings or actively driving
+    discussions (organizer vs attendee, sender vs recipient)?
+  - Trend: Is engagement increasing or decreasing?
+
+  A contact with high engagement_score who suddenly drops is
+  a churn signal. A contact with increasing engagement who
+  has seniority >= director is an expansion signal.
+
+## champion-strength
+  applies_to: Contact
+  outputs: Contact.champion_strength
+
+  Only computed for contacts with role = "champion".
+  Based on:
+  - Internal advocacy actions (feature requests, case study
+    participation, reference calls)
+  - Executive access (can they get us meetings with VPs/C-level?)
+  - Adoption driving (did usage increase in their department?)
+  - Public advocacy (social mentions, conference talks, reviews)
+
+  A champion_strength > 0.8 is a "power champion" — these
+  accounts almost never churn. Below 0.3 means the champion
+  designation should be re-evaluated.
+
+## adoption-score
+  applies_to: Usage
+  outputs: Usage.adoption_score
+
+  Calculated as: count(features_used) / count(features_entitled)
+
+  Not all features are weighted equally. "Aha moment" features
+  (identified from historical activation analysis) count 3x:
+  - Workflow automation
+  - Custom dashboards
+  - API integration
+  - Team collaboration features
+
+## usage-trend
+  applies_to: Usage
+  outputs: Usage.usage_trend
+
+  Compare current period's active_users against the average
+  of the prior 3 periods:
+  - Growing: current > avg * 1.1 (>10% increase)
+  - Declining: current < avg * 0.8 (<20% decrease)
+  - Stable: everything else
+
+## seat-utilization
+  applies_to: Subscription
+  outputs: Subscription.seat_utilization
+
+  Simple ratio: seats_active / seats_purchased
+
+  Updated weekly. Uses 30-day active definition (at least
+  one meaningful session in the last 30 days).
+
+## opportunity-probability
+  applies_to: Opportunity
+  outputs: Opportunity.probability
+
+  Base probability by stage:
+  - Discovery: 0.10
+  - Qualification: 0.25
+  - Evaluation: 0.50
+  - Negotiation: 0.75
+  - Closed-won: 1.00
+  - Closed-lost: 0.00
+
+  Modifiers:
+  - Champion identified: +0.15
+  - Executive sponsor engaged: +0.10
+  - Competitor active in deal: -0.15
+  - Previous expansion history: +0.10
+  - Budget confirmed: +0.10
+  - Blocker identified: -0.10
+
+  Capped at [0.05 .. 0.95] to avoid false certainty.
+
+## active-seats
+  applies_to: Subscription
+  outputs: Subscription.seats_active
+
+  Count of unique users associated with this subscription
+  who had at least one meaningful session in the last 30 days.
+  A "meaningful session" is defined as: logged in AND performed
+  at least one action beyond viewing the dashboard.

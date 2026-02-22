@@ -1,0 +1,133 @@
+---
+entity: Play
+description: >
+  A recommended GTM action in response to a signal or account
+  state. Plays bridge the gap between "the agent detected
+  something" and "here's what the human should do." They are
+  prescriptive but not scripts — they require human judgment,
+  account context, and relationship awareness to execute.
+provenance:
+  author: revops-team
+  source: domain-expert
+  confidence: 0.85
+  created: 2025-02-01
+status: stable
+---
+
+## Attributes
+
+name: string [required, unique]
+  | Play name as referenced by rules and signals.
+
+trigger_signal: string
+  | The signal type that typically activates this play.
+  | References taxonomies/signal-types.lore node names.
+
+owner_role: enum [csm, ae, se, csm-manager, ae-manager]
+  | Who is responsible for executing this play.
+
+urgency: enum [immediate, this-week, this-quarter, opportunistic]
+  | How quickly the play should be executed after trigger.
+  | Immediate: same business day.
+  | This-week: within 5 business days.
+  | This-quarter: fit into regular cadence.
+  | Opportunistic: execute when natural touchpoint arises.
+
+segment_applicability: list<string>
+  | Which account segments this play applies to.
+  | E.g., ["enterprise", "mid-market"] means not for SMB.
+
+prerequisites: list<string>
+  | What must be true before executing. E.g., "champion identified"
+  | or "usage data available for 30+ days."
+
+success_metric: text
+  | How to measure whether this play worked.
+
+## Notes
+
+Plays are NOT automated actions. The agent recommends a play;
+a human decides whether and how to execute it. The agent should
+include play context when creating signals so the CSM/AE
+understands the "why" behind the recommendation.
+
+Current playbook:
+
+**Expansion Plays:**
+
+*Proactive Seat Expansion* (trigger: Feature Ceiling Hit / seat utilization > 85%)
+- Owner: AE | Urgency: this-week | Segments: all
+- Approach: reach out before they hit the limit. Frame as
+  "I noticed your team is growing — let's make sure you have
+  room." Offer volume discount for annual commitment at
+  higher seat count. Do NOT wait for them to ask.
+- Success: seat expansion closed within 30 days.
+
+*Tier Upgrade Conversation* (trigger: tier-upgrade-readiness)
+- Owner: AE with CSM warm intro | Urgency: this-quarter | Segments: all
+- Approach: CSM introduces the AE as someone who can help
+  with the "next phase." Frame around unlocking value, not
+  increasing spend. Lead with the 2-3 features they'd gain
+  that directly map to their heaviest usage patterns.
+  Never cold-pitch an upgrade — always tie to observed need.
+- Prerequisites: adoption_score > 0.8, usage_trend = growing
+- Success: upgrade opportunity created within 60 days.
+
+*Analytics Add-On Pitch* (trigger: heavy basic reporting + CSV exports)
+- Owner: CSM | Urgency: opportunistic | Segments: professional, enterprise
+- Approach: during a regular check-in, ask "I noticed your
+  team runs a lot of reports — would it save time if those
+  were predictive and auto-delivered?" Position as a time-saver,
+  not a cost. Offer a 14-day trial of Analytics.
+- Prerequisites: 2+ months of active basic reporting
+- Success: Analytics trial started within 30 days.
+
+*Whitespace Discovery* (trigger: multi-signal-expansion)
+- Owner: AE | Urgency: this-quarter | Segments: mid-market, enterprise
+- Approach: full product-fit analysis. Map current usage to
+  catalog gaps. Build a 12-month expansion plan with the
+  champion. Position as strategic partnership, not upsell.
+- Prerequisites: champion identified, health_score > 70
+- Success: expansion opportunity with 2+ products created.
+
+**Retention Plays:**
+
+*Value Realization Check-In* (trigger: Usage Decline)
+- Owner: CSM | Urgency: this-week | Segments: all
+- Approach: do NOT lead with "we noticed your usage dropped."
+  Instead: "I wanted to check in on your team's priorities
+  this quarter — are there areas where we could help more?"
+  Listen for: changed priorities, team turnover, lost champion,
+  product frustration. Then address the real issue.
+- Success: usage trend stabilizes within 30 days.
+
+*Champion Succession* (trigger: Champion Departure)
+- Owner: CSM | Urgency: immediate | Segments: all
+- Approach: confirm the departure. Identify the 2-3 most
+  engaged remaining contacts. Invest heavily in the strongest
+  candidate — schedule 1:1, share success playbooks, make them
+  feel important. If no internal candidate, request exec
+  sponsor introduction to their replacement.
+- Escalation: if no replacement identified in 30 days,
+  CSM manager intervenes with executive outreach.
+- Success: new champion identified within 30 days.
+
+*Competitive Counter* (trigger: Competitor Mention)
+- Owner: CSM + AE together | Urgency: immediate | Segments: all
+- Approach: don't be defensive. Ask: "What prompted you to
+  look at alternatives?" Listen to the real gap. If it's a
+  feature gap, check roadmap. If it's price, do value analysis.
+  If it's relationship, escalate. Pull competitive intel from
+  the Competitor entity for specific counter-positioning.
+- Prerequisites: competitor identified (check aliases)
+- Success: account remains through next renewal.
+
+*Renewal Preparation* (trigger: Renewal Approaching, 90 days out)
+- Owner: CSM | Urgency: this-quarter (start 90 days before)
+- Approach: build renewal case 90 days before renewal date.
+  Compile: usage metrics, value delivered (time saved, outcomes),
+  ROI narrative, and expansion opportunity. If health < 60,
+  activate retention plays first. If health > 70, turn renewal
+  into expansion conversation.
+- Prerequisites: usage data for 3+ months
+- Success: renewal closed at same or higher ARR.

@@ -1,0 +1,55 @@
+---
+entity: Subscription
+description: >
+  An active or historical contract between us and an account.
+  Subscriptions are the revenue unit — ARR, expansion, and
+  contraction are measured at the subscription level and
+  aggregated to the account.
+---
+
+## Attributes
+
+subscription_id: string [required, unique]
+  | Billing system identifier (Stripe subscription ID).
+
+plan: -> Product
+  | The product/plan this subscription covers.
+
+status: enum [active, past-due, cancelled, trialing]
+  | Billing status from payment system.
+
+arr_amount: float
+  | Annualized value of this subscription.
+
+start_date: date
+  | Contract start date.
+
+renewal_date: date
+  | Next renewal date. Critical for renewal forecasting.
+
+contract_term_months: int
+  | Length of current contract term.
+
+seats_purchased: int
+  | Number of licensed seats.
+
+seats_active: int
+  | Number of seats with active usage in last 30 days.
+  | @computed: rules/scoring.lore#active-seats
+
+seat_utilization: float [0.0 .. 1.0]
+  | seats_active / seats_purchased. Below 0.6 is a
+  | contraction risk signal.
+  | @computed: rules/scoring.lore#seat-utilization
+
+expansion_eligible: boolean
+  | Whether this subscription is eligible for upsell
+  | or expansion based on plan type and contract terms.
+
+## Notes
+
+Multi-product accounts have multiple subscriptions. Revenue
+movements (expansion, contraction, churn) are tracked as
+changes between subscription snapshots taken monthly.
+A subscription with seat_utilization < 0.5 that is within
+90 days of renewal is a high-priority contraction risk.

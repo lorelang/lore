@@ -1,0 +1,103 @@
+---
+type: glossary
+description: >
+  Canonical definitions for terms used across the B2B SaaS
+  GTM ontology. When teams disagree on what a term means,
+  these definitions are authoritative.
+---
+
+## ARR (Annual Recurring Revenue)
+The annualized value of all active subscriptions for an
+account. Calculated as monthly recurring revenue × 12.
+Excludes one-time fees, professional services, and
+overages. ARR is our primary revenue metric.
+
+Do NOT confuse with ACV (Annual Contract Value), which
+includes one-time fees and is used for deal sizing.
+
+## NRR (Net Revenue Retention)
+Trailing 12-month revenue from existing accounts divided
+by the revenue those same accounts had 12 months ago.
+Includes expansion, contraction, and churn.
+NRR > 100% means existing accounts are growing net of churn.
+
+Formula: (Starting ARR + Expansion - Contraction - Churn) / Starting ARR
+
+Do NOT confuse with GRR (Gross Revenue Retention), which
+excludes expansion and only measures contraction + churn.
+
+## Expansion Revenue
+Net new ARR from existing customers. Sources include:
+seat expansion, tier upgrades, and add-on product purchases.
+Does NOT include price increases at renewal — those are
+classified as "pricing uplift" and tracked separately.
+
+## Contraction
+Decrease in ARR from an existing account that remains a
+customer. Causes include: seat reduction, tier downgrade,
+or removal of an add-on product. An account can contract
+without churning.
+
+## Churn
+Complete loss of an account's revenue. All subscriptions
+cancelled or not renewed. Measured as churned ARR / total
+ARR at start of period. Churn is calculated at the account
+level, not the subscription level.
+
+Voluntary churn: customer chose to leave.
+Involuntary churn: payment failure, account closure.
+
+## Whitespace
+Products or capabilities in our catalog that a customer
+does not currently subscribe to but could benefit from.
+Whitespace analysis compares the account's current
+subscriptions against the full product catalog, weighted
+by the account's usage patterns and industry benchmarks.
+
+## Champion
+A contact at the customer who actively advocates for our
+product internally. Champions drive adoption, defend budget
+during cuts, and expand usage to new teams. Identified by:
+high engagement score, proactive outreach, feature request
+frequency, and willingness to do references.
+
+A champion is NOT just a power user. A power user uses the
+product a lot; a champion influences others to use it too.
+
+## Economic Buyer
+The person who controls the budget and signs contracts.
+Often different from the champion. In enterprise accounts,
+the economic buyer is typically VP+ level while the champion
+may be a director or senior manager.
+
+## ICP (Ideal Customer Profile)
+The firmographic and behavioral profile of accounts most
+likely to become and remain successful customers. Our ICP
+is defined by: industry, employee count, tech stack,
+use case alignment, and growth trajectory. ICP fit score
+measures how closely an account matches.
+
+## Health Score
+A composite metric (0-100) reflecting the overall health of
+the customer relationship. See rules/scoring.lore#account-health-score
+for the calculation methodology. Health score is a lagging
+indicator — it reflects what has already happened. Signals
+are the leading indicators of where health is heading.
+
+## Signal
+A detected event or pattern that predicts a change in
+account trajectory. Signals are the primary input to the
+expansion and churn detection engines. See
+taxonomies/signal-types.lore for the full classification.
+
+## Play / Playbook
+A recommended sequence of actions in response to a signal
+or account state. Plays are prescriptive — they tell the
+CSM or AE what to do, who to contact, and what messaging
+to use. Plays are NOT fully automated; they require human
+judgment and execution.
+
+## Book of Business
+The set of accounts owned by a CSM or AE. Measured by
+total ARR, account count, and weighted pipeline. Used
+for workload balancing and territory planning.

@@ -1,0 +1,49 @@
+---
+entity: Interaction
+description: >
+  Any engagement touchpoint between us and an account's
+  contacts. Interactions are the raw signal layer — patterns
+  in interactions reveal expansion readiness, churn risk,
+  and relationship health.
+---
+
+## Attributes
+
+type: enum [email, meeting, call, support-ticket, product-feedback, webinar, event, chat]
+  | Channel of interaction.
+
+direction: enum [inbound, outbound]
+  | Did the customer initiate or did we?
+
+timestamp: datetime [required]
+  | When the interaction occurred.
+
+participants: list<-> Contact>
+  | All contacts involved (both internal and external).
+
+sentiment: enum [positive, neutral, negative, unknown]
+  | Detected sentiment. For emails and tickets, derived via
+  | NLP. For meetings, from call transcript analysis.
+
+topics: list<string>
+  | Key topics discussed. Extracted from transcripts, email
+  | body, or ticket tags.
+
+summary: text
+  | Brief summary of the interaction. Auto-generated from
+  | transcripts or email content.
+
+is_executive: boolean
+  | True if any participant has seniority = vp or c-level.
+  | Executive engagement is a strong health signal.
+
+## Notes
+
+Interaction frequency patterns are more predictive than
+absolute counts. An account that typically has 10 interactions
+per month dropping to 3 is a stronger churn signal than an
+account that always has 3 per month.
+
+Support ticket interactions with negative sentiment that
+mention "competitor" or "alternative" in topics should
+trigger immediate CSM alert regardless of health score.

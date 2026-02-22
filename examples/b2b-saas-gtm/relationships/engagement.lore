@@ -1,0 +1,65 @@
+---
+domain: Engagement
+description: >
+  Relationships that capture how accounts and contacts
+  interact with us and our product. This is the signal
+  layer that feeds expansion and churn detection.
+---
+
+## PARTICIPATED_IN
+  from: Contact -> to: Interaction
+  cardinality: many-to-many
+  | Contacts participate in interactions. Both internal
+  | (our team) and external (customer) contacts are linked.
+
+  properties:
+    role: enum [organizer, attendee, sender, recipient]
+
+## HAS_USAGE
+  from: Account -> to: Usage
+  cardinality: one-to-many
+  | Usage records are per account per period. An account
+  | accumulates usage records over time forming a time series.
+
+## TRIGGERED
+  from: Account -> to: Signal
+  cardinality: one-to-many
+  | Signals are detected at the account level. An account
+  | can have many active signals simultaneously.
+
+## GENERATED_FROM
+  from: Signal -> to: Interaction
+  cardinality: many-to-one [optional]
+  | Some signals originate from specific interactions
+  | (e.g., a negative sentiment support ticket generates
+  | a churn signal). Links signal to its evidence.
+
+## GENERATED_FROM_USAGE
+  from: Signal -> to: Usage
+  cardinality: many-to-one [optional]
+  | Some signals originate from usage patterns (e.g.,
+  | usage spike generates an expansion signal).
+
+## RESULTED_IN
+  from: Signal -> to: Opportunity
+  cardinality: many-to-one [optional]
+  | When a signal is actioned and an opportunity is created,
+  | this links the signal to the outcome. Used for measuring
+  | signal-to-pipeline conversion.
+
+## Traversal: signal-to-evidence
+  path: Signal -[GENERATED_FROM]-> Interaction -[PARTICIPATED_IN]- Contact
+  | Answers: "What happened that triggered this signal, and
+  | who was involved?" Essential for CSM context before
+  | taking action on a signal.
+
+## Traversal: account-engagement-timeline
+  path: Account -[HAS_CONTACT]-> Contact -[PARTICIPATED_IN]-> Interaction
+  | Answers: "What's the full engagement history for this
+  | account?" Ordered by timestamp, gives a narrative view
+  | of the relationship.
+
+## Traversal: signal-to-revenue
+  path: Signal -[RESULTED_IN]-> Opportunity -[stage = closed-won]
+  | Answers: "How much pipeline and revenue have our signals
+  | generated?" Key metric for proving AI agent ROI.

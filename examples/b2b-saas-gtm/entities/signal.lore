@@ -1,0 +1,47 @@
+---
+entity: Signal
+description: >
+  A detected event or pattern that indicates a change in
+  account trajectory — either toward expansion or toward
+  churn. Signals are the AI agent's primary input for
+  generating recommendations.
+---
+
+## Attributes
+
+type: -> SignalType
+  | Classification of the signal per taxonomies/signal-types.lore
+
+strength: enum [strong, moderate, weak]
+  | Confidence level based on signal clarity and historical
+  | predictive value.
+
+direction: enum [expansion, contraction, neutral]
+  | Whether this signal suggests growth or risk.
+
+detected_at: datetime [required]
+  | When the signal was first detected.
+
+source_data: text
+  | Raw evidence that generated this signal. Could be a usage
+  | metric change, an email excerpt, a support ticket, or
+  | a product event.
+
+status: enum [new, acknowledged, actioned, dismissed]
+  | Workflow status. New signals need review; actioned means
+  | a play has been triggered.
+
+recommended_play: string [optional]
+  | The GTM play the agent recommends based on this signal.
+  | References a playbook entry.
+
+## Notes
+
+Signals are ephemeral — they represent a point-in-time
+observation. Multiple related signals may be clustered
+into a "signal group" that tells a coherent story. For
+example: usage spike + new department onboarded + executive
+meeting requested = strong expansion signal cluster.
+
+Signal detection runs daily. Historical signals older than
+90 days that were never actioned are auto-archived.

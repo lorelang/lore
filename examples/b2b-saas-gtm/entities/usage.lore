@@ -1,0 +1,60 @@
+---
+entity: Usage
+description: >
+  Aggregated product usage metrics for an account over
+  a time period. Usage is the strongest leading indicator
+  of both expansion and churn — it reveals whether the
+  customer is getting value from the product.
+---
+
+## Attributes
+
+period: enum [daily, weekly, monthly]
+  | Aggregation period for this usage record.
+
+period_start: date [required]
+  | Start of the measurement period.
+
+active_users: int
+  | Unique users with at least one meaningful session.
+
+total_sessions: int
+  | Total login sessions across all users.
+
+feature_adoption: list<string>
+  | Which features were used this period. Compared against
+  | the account's entitled features to calculate adoption %.
+
+api_calls: int
+  | For platform accounts, total API calls. Indicates
+  | depth of integration.
+
+data_volume_gb: float
+  | Data processed or stored. Growth indicates deepening
+  | reliance on the platform.
+
+adoption_score: float [0.0 .. 1.0]
+  | Ratio of features used vs. features available on
+  | the account's current plan.
+  | @computed: rules/scoring.lore#adoption-score
+
+usage_trend: enum [growing, stable, declining]
+  | Direction of usage over the last 3 periods.
+  | @computed: rules/scoring.lore#usage-trend
+
+## Notes
+
+Usage data is the most objective signal we have. Unlike
+interactions (which can be gamed by an AE scheduling
+unnecessary check-ins), usage directly measures value
+delivery.
+
+Key usage patterns to watch:
+- "Aha moment" features: If an account starts using
+  advanced analytics or workflow automation, they've
+  crossed a stickiness threshold.
+- Department spread: Usage from 1 department vs. 3+
+  departments is a fundamentally different expansion
+  posture.
+- Weekend/off-hours usage indicates the product has
+  become critical infrastructure, not just a nice-to-have.

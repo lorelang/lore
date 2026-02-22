@@ -1,0 +1,99 @@
+---
+taxonomy: ProductCatalog
+description: >
+  Our full product portfolio organized by category and tier.
+  This taxonomy drives whitespace analysis — comparing what
+  an account has versus what's available — and informs the
+  expansion agent's product recommendations.
+applied_to: Product.category
+provenance:
+  author: product-team
+  source: domain-expert
+  confidence: 0.95
+  created: 2025-01-15
+status: stable
+---
+
+Platform
+├── Starter                                      @tag: entry-tier
+│   | $29/seat/month. Our entry point for teams under 20.
+│   | Core dashboard, basic reporting, 5 integrations max.
+│   | Most common entry: self-serve trial (14-day, no credit card).
+│   | Conversion path: trial → monthly → annual after 3 months.
+│   | Key limitation: no workflow automation, no API access.
+│   | When accounts hit these walls, they're upgrade-ready.
+├── Professional                                 @tag: mid-tier
+│   | $79/seat/month. Mid-market workhorse. Everything in Starter
+│   | plus advanced analytics, workflow automation, custom fields,
+│   | API access (10K calls/day), and 25 integrations.
+│   | This is where the majority of expansion revenue concentrates.
+│   | Accounts that adopt workflow automation have 3x retention.
+│   | Key limitation: no SSO, no audit logs, no SLA.
+│   | Ceiling signals: > 50 users, security review requests,
+│   | procurement team involvement.
+└── Enterprise                                   @tag: top-tier
+    | $149/seat/month (annual contracts only, minimum 50 seats).
+    | Everything in Professional plus SSO/SAML, audit logging,
+    | SLA (99.95% uptime), dedicated CSM, unlimited integrations,
+    | API (100K calls/day), custom data retention policies.
+    | Average sales cycle: 45 days. Requires champion + exec sponsor.
+    | Enterprise accounts rarely churn (< 3% annual rate).
+    | Key signal for upgrade: procurement/security team engagement.
+
+Add-Ons
+├── Advanced Analytics                           @tag: analytics
+│   | $20/seat/month. Available on Professional and Enterprise.
+│   | Predictive dashboards, cohort analysis, funnel visualization,
+│   | custom SQL queries, scheduled report delivery.
+│   | Accounts with this add-on have 40% lower churn — it's our
+│   | single strongest stickiness feature. When you see an account
+│   | exporting CSVs to do analysis in Sheets, that's the signal
+│   | to pitch Analytics.
+│   | Prerequisite behavior: heavy use of basic reporting for 2+ months.
+└── Data Export                                  @tag: data-platform
+    | $500/month flat fee (not per-seat). Available on Professional
+    | and Enterprise. Real-time sync to Snowflake, BigQuery, or
+    | Redshift. Signals deep platform commitment — once data flows
+    | into their warehouse, switching cost is extreme.
+    | Accounts with Data Export: 95% retention rate.
+    | Prerequisite behavior: API usage > 5K calls/day OR
+    | data_volume > 10GB OR mention of "data warehouse" in support.
+
+Professional Services
+├── Implementation                               @tag: services
+│   | $15K-$75K one-time, scoped by complexity.
+│   | Standard (< 50 users): $15K, 3 weeks.
+│   | Advanced (50-200 users, integrations): $35K, 6 weeks.
+│   | Enterprise (200+ users, migration, custom): $75K, 12 weeks.
+│   | Accounts that buy implementation onboard 3x faster and have
+│   | 25% higher adoption scores at 90 days.
+├── Training                                     @tag: services
+│   | $3K-$10K per session, virtual or on-site.
+│   | Admin training (2 days): for the team managing the platform.
+│   | End-user training (1 day): for daily users.
+│   | Champion enablement (half day): specifically for advocates —
+│   | teaches them how to drive adoption internally.
+│   | Recurring quarterly training correlates with 20% higher NRR.
+└── Migration                                    @tag: services
+    | $20K-$100K, scoped by data complexity and source system.
+    | Common sources: Salesforce, HubSpot, legacy custom systems.
+    | Migration includes data mapping, validation, parallel run,
+    | and cutover support. Migration accounts have highest first-year
+    | retention (98%) because the switching cost becomes real.
+
+## Inheritance Rules
+
+Products tagged @tag: entry-tier should trigger upgrade analysis
+when accounts show ceiling-hit signals (seat utilization > 85%,
+feature adoption > 80%, or explicit feature requests for
+capabilities in the next tier).
+
+Products tagged @tag: services are not recurring revenue but
+strongly correlate with retention. The agent should recommend
+services when an account shows adoption struggles (adoption_score
+< 0.5 at 60 days) or when a new enterprise deal closes.
+
+Products tagged @tag: analytics or @tag: data-platform are
+stickiness multipliers. The agent should proactively recommend
+these when usage patterns suggest the account is doing manually
+what the add-on automates.

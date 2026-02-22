@@ -1,0 +1,31 @@
+---
+view: RevOps
+description: >
+  Full ontology view for Revenue Operations. RevOps sees
+  everything — this view is the complete domain model used
+  for analytics, forecasting, and system configuration.
+audience: RevOps, Data Engineering, Executive Leadership
+---
+
+## Entities
+- All entities with all attributes
+
+## Relationships
+- All relationships and traversals
+
+## Rules
+- All rules
+
+## Key Questions
+- What's our overall NRR and what's driving it?
+- How effective is the AI expansion agent? (signal-to-revenue)
+- Where are the systemic churn risk patterns?
+- How should we rebalance CSM book assignments?
+- What's the forecast for expansion pipeline this quarter?
+- Which signals have the highest conversion rate to closed-won?
+- Are there segments where our ICP scoring is miscalibrated?
+
+## Notes
+RevOps uses this view to configure the AI agent's behavior,
+tune scoring weights, and validate that rules are firing
+correctly. This is the "admin" perspective on the ontology.

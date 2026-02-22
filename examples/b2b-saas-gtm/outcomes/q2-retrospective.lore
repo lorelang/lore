@@ -1,0 +1,57 @@
+---
+outcomes: Q2 2025 Retrospective
+reviewed_by: outcome-tracker-agent
+date: 2025-07-01
+provenance:
+  author: outcome-tracker-agent
+  source: ai-generated
+  confidence: 0.88
+  created: 2025-07-01
+status: proposed
+---
+
+## Acme Corp expansion — correct
+
+We predicted Acme Corp was expansion-ready (confidence: 0.82).
+They expanded. Upsell closed 2025-06-28 for +$45K ARR,
+upgrading from Growth to Enterprise tier.
+
+The VP Engineering engagement was the strongest signal —
+she championed the enterprise tier internally after the
+webinar. The multi-department adoption pattern confirmed
+product-market fit at the organization level.
+
+Takeaway: increase weight of executive engagement signals in the expansion detection rules
+Takeaway: multi-department adoption should be a first-class signal type in the Signal entity
+
+Ref: observations/q2-account-signals.lore#acme-corp-shows-expansion-readiness
+
+## Beta Corp churn risk — false positive
+
+We flagged Beta Corp as churn risk (confidence: 0.68).
+They renewed at the same tier. The usage decline was
+seasonal, as our observation suspected.
+
+This is the third Q4 false positive from the
+usage-decline-alert rule in enterprise accounts in
+cyclical industries.
+
+Takeaway: the usage-decline-alert rule needs seasonal adjustment for cyclical industries
+Takeaway: Account entity should track industry vertical to enable seasonal pattern detection
+
+Ref: observations/q2-account-signals.lore#beta-corp-usage-decline-looks-seasonal
+Ref: observations/signal-quality-review.lore#usage-decline-signals-need-industry-context
+
+## Gamma Inc fast expansion — correct
+
+We identified Gamma Inc as a fast-track expansion candidate.
+They upgraded to the next tier within 3 weeks of onboarding,
+adding 30 more seats.
+
+The rapid onboarding velocity was the key signal. CTO
+engagement and API access requests confirmed enterprise intent.
+
+Takeaway: rapid onboarding velocity (3x segment average) should trigger immediate AE notification
+Takeaway: API access requests correlate strongly with enterprise expansion intent
+
+Ref: observations/q2-account-signals.lore#gamma-inc-rapid-onboarding

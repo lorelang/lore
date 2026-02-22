@@ -1,0 +1,48 @@
+---
+observations: Q2 Account Expansion Signals
+about: Account
+observed_by: expansion-agent-v2
+date: 2025-06-15
+confidence: 0.75
+status: proposed
+provenance:
+  author: expansion-agent-v2
+  source: ai-generated
+  confidence: 0.75
+  created: 2025-06-15
+---
+
+## Acme Corp shows expansion readiness
+
+Acme Corp (acme.com) is showing classic multi-signal expansion
+patterns over the past 30 days:
+
+- Active users increased 45%, from 120 to 174
+- Three new departments started using the product
+- VP Engineering Sarah Chen attended the enterprise webinar
+- Support tickets shifted from "how do I" to "can it also do"
+
+This pattern has historically preceded expansion in 78% of
+similar enterprise accounts. Recommend AE outreach within
+2 weeks, leading with the multi-department adoption story.
+
+## Beta Corp usage decline looks seasonal
+
+Beta Corp (beta.io) showed a 30% usage decline in Q4,
+but this matches their industry's seasonal pattern. Three
+of their four peer accounts showed similar dips.
+
+This is likely NOT a churn signal. The usage-decline-alert
+rule fired here but was a false positive. Consider adding
+seasonal adjustment to the rule.
+
+## Gamma Inc rapid onboarding
+
+Gamma Inc onboarded 50 users in their first week, well
+above the typical 15-20 for their segment. Their champion
+(CTO) is highly engaged and has already asked about API
+access and enterprise features.
+
+This looks like a fast-track expansion candidate. The
+seat-expansion-trigger rule should fire within 2 weeks
+at this adoption rate.

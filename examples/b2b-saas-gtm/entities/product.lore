@@ -1,0 +1,140 @@
+---
+entity: Product
+description: >
+  A product or plan that we sell. Products are the units
+  of our catalog — accounts subscribe to products, and
+  expansion happens when accounts add new products or
+  upgrade existing ones. See glossary/products.lore for
+  canonical definitions and taxonomies/product-catalog.lore
+  for the full hierarchy.
+provenance:
+  author: product-team
+  source: domain-expert
+  confidence: 0.95
+  created: 2025-01-15
+status: stable
+---
+
+## Attributes
+
+name: string [required, unique]
+  | Product name as it appears in pricing page and contracts.
+
+sku: string [required, unique]
+  | Internal product identifier.
+
+tier: enum [starter, professional, enterprise]
+  | Pricing tier. Determines feature set and limits.
+  | See taxonomies/product-catalog.lore for full tier details.
+
+base_price_monthly: float
+  | List price per seat per month before discounts.
+  | Enterprise is annual-only: multiply by 12 × seat minimum.
+
+pricing_model: enum [per-seat, flat-fee, one-time]
+  | How this product is billed. Core tiers are per-seat.
+  | Data Export is flat-fee. Services are one-time.
+
+minimum_seats: int [optional]
+  | Minimum seat count for this product. Enterprise = 50.
+  | Below this, the account should be on a lower tier.
+
+category: enum [core-platform, add-on, professional-services]
+  | Core platform is the main product. Add-ons extend it.
+  | Professional services are implementation/consulting.
+
+available_with: list<string> [optional]
+  | Which tiers this product can be attached to.
+  | E.g., Analytics add-on: ["professional", "enterprise"].
+  | Empty means available to all tiers.
+
+features: list<string>
+  | Key feature slugs included in this product. Maps to
+  | Feature.slug for adoption tracking and whitespace analysis.
+
+upgrade_path: -> Product [optional]
+  | The natural next product for accounts on this plan.
+  | Starter -> Professional -> Enterprise.
+
+typical_sales_cycle_days: int [optional]
+  | Average days from opportunity creation to close.
+  | Starter: 1 (self-serve), Professional: 14, Enterprise: 45.
+
+attach_rate: float [0.0 .. 1.0] [optional]
+  | Current penetration for add-on products within their
+  | eligible base. Updated quarterly by RevOps.
+  | @computed: rules/scoring.lore#adoption-score
+
+## Identity
+
+Products are uniquely identified by SKU. Product names can
+change (marketing rebranding) but SKUs are permanent.
+
+## Notes
+
+Expansion revenue can come from three motions:
+1. **Seat expansion** (more users on same plan) — frictionless,
+   often doesn't need AE involvement. Triggered by seat
+   utilization > 85%.
+2. **Tier upgrade** (Starter -> Professional -> Enterprise) —
+   highest ACV impact but requires champion + business case.
+   Triggered by feature ceiling, security requirements, or
+   user count exceeding tier limits.
+3. **Add-on attach** (Analytics or Data Export added) —
+   medium ACV, targeted pitch. Triggered by usage patterns
+   that indicate the account is doing manually what the
+   add-on automates.
+
+The agent should understand which motion fits each account
+and recommend the right play. A Professional account with
+50+ users and security requests is an Enterprise upgrade
+candidate. A Professional account that runs 30 reports
+a month is an Analytics attach candidate. Both are
+"expansion" but the play is completely different.
+
+Professional services are not recurring revenue but they
+are a leading indicator of retention and expansion. The
+agent should recommend services alongside product sales —
+an Enterprise upgrade without implementation services
+leads to 40% lower adoption at 90 days.
+
+**SKU reality vs. product concepts:**
+
+The Product entity represents what sales and CS talk about —
+the conceptual product. Billing tells a different story.
+Stripe has 40+ SKUs that don't map cleanly to these products:
+
+- Grandfathered plans: "Professional v1" and "Professional v2"
+  are different SKUs with different feature sets and pricing,
+  but both map to Product: Professional. ~12% of Professional
+  accounts are on v1 pricing ($59/seat, missing workflow
+  automation). The agent should check which billing SKU an
+  account is on before recommending workflow-dependent plays.
+
+- Custom enterprise deals: ~30% of Enterprise accounts have
+  negotiated packages that don't match the standard SKU.
+  Common customizations: lower per-seat price in exchange
+  for higher seat commitment, Analytics bundled free, or
+  extended SLA terms. These show up as custom SKUs in Stripe
+  (e.g., "enterprise-custom-acme-2024"). For agent purposes,
+  treat these as Enterprise with a note to check the actual
+  feature entitlements before assuming standard feature set.
+
+- Promotional bundles: "Annual Professional + Analytics at
+  15% off" is its own Stripe line item. The agent should
+  decompose this into Product: Professional + Product:
+  Advanced Analytics. Don't count bundles as a separate
+  product for whitespace analysis.
+
+- Usage overages: API calls above the tier limit, storage
+  above the included amount, and seats above the committed
+  count are billed as separate line items. These are not
+  products — they're signals. High API overage on Professional
+  is an Enterprise upgrade signal, not a "product" the
+  account owns.
+
+The rule of thumb: when reasoning about what an account
+*has*, use the conceptual Product. When reasoning about
+what they *pay*, you'll need the billing SKU. The agent
+should never surface billing SKUs to CSMs or AEs — always
+translate back to product language.

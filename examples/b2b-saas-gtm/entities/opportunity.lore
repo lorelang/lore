@@ -1,0 +1,55 @@
+---
+entity: Opportunity
+description: >
+  A potential revenue event — new business, expansion, or
+  renewal. Opportunities track the commercial pipeline and
+  are the unit of GTM forecasting.
+---
+
+## Attributes
+
+name: string [required]
+  | Descriptive name (e.g., "Acme Corp - Enterprise Upgrade Q2").
+
+type: enum [new-business, expansion, renewal, win-back]
+  | The commercial motion this opportunity represents.
+
+stage: enum [discovery, qualification, evaluation, negotiation, closed-won, closed-lost]
+  | Current pipeline stage.
+
+amount: float
+  | Projected ARR value if closed-won.
+
+close_date: date
+  | Expected close date.
+
+probability: float [0.0 .. 1.0]
+  | Win probability based on stage and engagement signals.
+  | @computed: rules/scoring.lore#opportunity-probability
+
+source: enum [csm-identified, agent-recommended, ae-created, product-led, inbound]
+  | How this opportunity was generated. Agent-recommended means
+  | the AI expansion agent identified and proposed it.
+
+products: list<-> Product>
+  | Which products are included in this opportunity.
+
+primary_contact: -> Contact
+  | Main point of contact for this deal.
+
+champion: -> Contact [optional]
+  | Internal champion advocating for this deal.
+
+blockers: list<string>
+  | Known obstacles to closing (budget freeze, competing
+  | priority, technical concern, etc.)
+
+## Notes
+
+Expansion opportunities are the primary output of the
+revenue expansion agent. When the agent identifies an
+expansion signal, it creates an opportunity recommendation
+with pre-populated fields based on the signal analysis.
+
+An opportunity without an identified champion has a
+historically 3x lower close rate and should be flagged.

@@ -1,0 +1,2222 @@
+{
+  "metadata": {
+    "name": "b2b-saas-gtm",
+    "version": "0.2.0",
+    "description": "Domain ontology for a B2B SaaS company's go-to-market operations. Models accounts, contacts, subscriptions, product usage, and engagement signals to power an AI agent that identifies revenue expansion opportunities, predicts churn risk, and recommends GTM plays.\n",
+    "domain": "B2B SaaS Revenue Operations",
+    "maintainers": [
+      {
+        "name": "RevOps Team",
+        "role": "Domain Owner"
+      }
+    ]
+  },
+  "entities": [
+    {
+      "name": "Account",
+      "description": "A company that is a customer, prospect, or former customer. Accounts are the primary commercial unit \u2014 all revenue, contracts, and engagement roll up to the account level.\n",
+      "inherits": null,
+      "attributes": [
+        {
+          "name": "name",
+          "type": "string",
+          "constraints": [
+            "required",
+            "unique"
+          ],
+          "description": "Legal entity name or commonly used company name.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "domain",
+          "type": "string",
+          "constraints": [
+            "unique"
+          ],
+          "description": "Primary web domain (e.g., acme.com). Used for identity resolution and enrichment.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "industry",
+          "type": "string",
+          "constraints": [],
+          "description": "Industry vertical per our ICP definition.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "industry_seasonality",
+          "type": "enum",
+          "constraints": [
+            "cyclical",
+            "stable",
+            "unknown"
+          ],
+          "description": "Whether this industry has predictable seasonal patterns that affect usage. Cyclical industries (retail, travel, construction) show usage dips that are NOT churn signals. The usage-decline-alert rule should adjust thresholds for cyclical accounts. See outcomes/q2-retrospective.lore for the false-positive analysis that motivated this field.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "fiscal_year_end",
+          "type": "enum",
+          "constraints": [
+            "q1",
+            "q2",
+            "q3",
+            "q4",
+            "unknown"
+          ],
+          "description": "When this account's fiscal year ends. Affects budget cycle timing \u2014 expansion pitches should land 2-3 months before fiscal year end when budget is being allocated.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "employee_count",
+          "type": "int",
+          "constraints": [],
+          "description": "Most recent headcount from enrichment data.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "segment",
+          "type": "enum",
+          "constraints": [
+            "enterprise",
+            "mid-market",
+            "smb"
+          ],
+          "description": "Determined by ARR band. Enterprise >= $100K ARR, Mid-market $25K-$100K, SMB < $25K.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "arr",
+          "type": "float",
+          "constraints": [],
+          "description": "Current annualized recurring revenue from all active subscriptions. Updated on each billing cycle.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "stage",
+          "type": "enum",
+          "constraints": [
+            "prospect",
+            "onboarding",
+            "active",
+            "at-risk",
+            "churned",
+            "former"
+          ],
+          "description": "Current lifecycle stage. See Lifecycle section.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "health_score",
+          "type": "float",
+          "constraints": [
+            "0.0 .. 100.0"
+          ],
+          "description": "Composite score reflecting engagement, usage, support sentiment, and commercial signals.",
+          "annotations": {
+            "computed": "rules/scoring.lore#account-health-score"
+          },
+          "reference_to": null
+        },
+        {
+          "name": "nrr_trailing_12m",
+          "type": "float",
+          "constraints": [],
+          "description": "Net revenue retention for this account over trailing 12 months. Values above 1.0 indicate expansion; below 1.0 indicate contraction.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "csm_owner",
+          "type": "reference",
+          "constraints": [],
+          "description": "The CSM responsible for this account. References our internal team member (modeled as Contact with is_internal = true).",
+          "annotations": {},
+          "reference_to": "Contact"
+        },
+        {
+          "name": "ae_owner",
+          "type": "reference",
+          "constraints": [],
+          "description": "The Account Executive who owns the commercial relationship.",
+          "annotations": {},
+          "reference_to": "Contact"
+        },
+        {
+          "name": "icp_fit_score",
+          "type": "float",
+          "constraints": [
+            "0.0 .. 1.0"
+          ],
+          "description": "How closely this account matches our Ideal Customer Profile. Based on industry, size, tech stack, and use case alignment.",
+          "annotations": {},
+          "reference_to": null
+        }
+      ],
+      "identity": "An account is uniquely identified by its primary web domain.\nIf two business entities share a domain, they are treated as\none account. Parent/subsidiary relationships are modeled via\nthe SUBSIDIARY_OF relationship, not as separate domain entries.",
+      "lifecycle": "Accounts progress through stages based on commercial and\nengagement milestones:\n\n- **Prospect**: No signed contract. May have open opportunities.\n- **Onboarding**: First contract signed, implementation in progress.\n  Transition to Active requires: (1) product deployed in production,\n  (2) at least 5 active users, (3) first value milestone confirmed.\n- **Active**: Live customer with healthy engagement.\n- **At-risk**: Health score dropped below 40 OR NRR < 0.85 OR\n  champion departed. Triggers CSM intervention playbook.\n- **Churned**: All subscriptions cancelled or expired. Grace period\n  of 30 days before moving to Former.\n- **Former**: Previously churned, now a win-back target.",
+      "notes": "Account data is enriched weekly from Clearbit/ZoomInfo.\nRevenue data syncs daily from the billing system (Stripe).\nStage transitions are automated by rules/scoring.lore but\ncan be manually overridden by CSM with a logged reason.\n\n**Expected adoption curves by segment:**\n- SMB: should reach adoption_score > 0.5 within 30 days.\n  If not, the product is likely too complex for their team\n  size. Recommend training or a simplified onboarding flow.\n- Mid-market: 60-day window to reach 0.5 adoption. These\n  accounts benefit most from implementation services.\n- Enterprise: 90-day window is normal. Complex onboarding\n  with multiple departments, IT review, SSO setup. Do not\n  trigger adoption concern signals before 90 days.\n\n**Budget cycle intelligence:**\n- Expansion pitches land best 2-3 months before fiscal year\n  end (when budget is being planned) or in Q1 of their fiscal\n  year (when new budget is available).\n- Avoid expansion conversations in the last month of their\n  fiscal year \u2014 budget is already committed.\n- If fiscal_year_end is unknown, assume Q4 (calendar year)\n  unless the account is in government (Q3) or education (Q2).\n\n**Cohort context:**\n- Always compare an account's metrics to its cohort (same\n  segment, similar onboarding date). An enterprise account\n  with 0.4 adoption at 60 days is on track. An SMB account\n  with 0.4 adoption at 60 days is falling behind.\n- Peer benchmarks: the agent should know what \"good\" looks\n  like for this account's segment and industry."
+    },
+    {
+      "name": "Competitor",
+      "description": "A competing product or vendor that appears in our deal cycles and churn events. Competitors are not just companies \u2014 they include \"do nothing\" (stay on spreadsheets) and \"build internally\" (customer builds their own). Understanding competitor dynamics lets the agent craft targeted responses when a competitor-threat signal fires.\n",
+      "inherits": null,
+      "attributes": [
+        {
+          "name": "name",
+          "type": "string",
+          "constraints": [
+            "required",
+            "unique"
+          ],
+          "description": "Competitor name as sales team refers to them.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "type",
+          "type": "enum",
+          "constraints": [
+            "direct",
+            "adjacent",
+            "diy",
+            "inertia"
+          ],
+          "description": "Direct: head-to-head feature overlap. Adjacent: different category but solves similar problem. DIY: customer builds internally with spreadsheets/code. Inertia: \"do nothing\" \u2014 the status quo.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "segment_strength",
+          "type": "enum",
+          "constraints": [
+            "enterprise",
+            "mid-market",
+            "smb",
+            "all"
+          ],
+          "description": "Where this competitor is strongest. Informs which of our accounts are most at risk.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "primary_differentiator",
+          "type": "text",
+          "constraints": [],
+          "description": "What this competitor does that we don't, or does better. Must be honest \u2014 the agent needs accurate intel, not marketing spin.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "our_advantage",
+          "type": "text",
+          "constraints": [],
+          "description": "What we do better than this competitor. Used to craft positioning when competitor-threat signal fires.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "typical_displacement_trigger",
+          "type": "text",
+          "constraints": [],
+          "description": "What typically causes an account to consider switching to this competitor. Knowing the trigger helps us intervene before the evaluation starts.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "win_rate_against",
+          "type": "float",
+          "constraints": [
+            "0.0 .. 1.0"
+          ],
+          "description": "Historical win rate in deals where this competitor was present. Updated quarterly from closed-won/closed-lost data.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "loss_reasons",
+          "type": "list<string>",
+          "constraints": [],
+          "description": "Top reasons we lose to this competitor. Ordered by frequency.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "counter_play",
+          "type": "text",
+          "constraints": [],
+          "description": "The recommended response when this competitor appears in a deal. Not a script \u2014 a strategic framework for how to position.",
+          "annotations": {},
+          "reference_to": null
+        }
+      ],
+      "identity": "A competitor is identified by name. Aliases should be tracked\n(e.g., \"SFDC\" = \"Salesforce\") so the NLP pipeline can detect\nmentions across all naming variants.",
+      "lifecycle": "",
+      "notes": "Competitor intelligence is perishable. What was true about a\ncompetitor 6 months ago may not be true today \u2014 they ship\nfeatures too. The agent should treat competitor data with\ntime-decayed confidence and flag entries older than 90 days\nfor review.\n\nCurrent competitive landscape:\n\n**CompeteFlow** (direct, mid-market strength)\n- Their workflow automation is more visual (drag-and-drop).\n- We win on analytics depth, API, and enterprise security.\n- Win rate: 55%. We lose when the buyer is non-technical and\n  values ease-of-setup over power.\n- Counter: demo our workflow builder improvements, emphasize\n  analytics moat, get a technical evaluator in the room.\n\n**DataStack** (direct, enterprise strength)\n- Enterprise-first, heavy on compliance and data governance.\n- More expensive. Their analytics are stronger than ours.\n- We win on time-to-value and mid-market fit.\n- Win rate: 40%. We lose on compliance features in regulated industries.\n- Counter: emphasize faster onboarding (weeks vs months),\n  highlight total cost including their expensive implementation.\n\n**Spreadsheets / Manual process** (diy, all segments)\n- The #1 competitor across all segments. 40% of lost deals\n  are to \"no decision\" \u2014 they stick with what they have.\n- Typically: Excel/Sheets + email + manual process.\n- We win when someone quantifies the time cost.\n- Counter: ROI calculator, \"what does this process cost you\n  in hours per week?\" framing. Find the person who's tired\n  of maintaining the spreadsheet.\n\n**Internal Tools** (diy, enterprise)\n- Engineering team builds a custom internal tool.\n- We lose to this when the company has spare engineering capacity\n  and the champion is a CTO who prefers in-house.\n- We win when maintenance cost becomes real (usually 6-12 months).\n- Counter: \"build vs buy\" TCO analysis. Highlight ongoing\n  maintenance, opportunity cost, and feature velocity gap.",
+      "provenance": {
+        "author": "revops-team",
+        "source": "domain-expert",
+        "confidence": 0.85,
+        "created": "2025-02-01"
+      },
+      "status": "stable"
+    },
+    {
+      "name": "Contact",
+      "description": "A person associated with an account. Can be an external stakeholder (customer) or internal team member. Contacts are the human nodes in the relationship graph \u2014 deals, engagement, and influence flow through people.\n",
+      "inherits": null,
+      "attributes": [
+        {
+          "name": "name",
+          "type": "string",
+          "constraints": [
+            "required"
+          ],
+          "description": "Full name as it appears in CRM.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "email",
+          "type": "string",
+          "constraints": [
+            "required",
+            "unique"
+          ],
+          "description": "Primary email address. Used for identity resolution. @pii",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "constraints": [],
+          "description": "Current job title.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "role",
+          "type": "enum",
+          "constraints": [
+            "champion",
+            "economic-buyer",
+            "technical-buyer",
+            "end-user",
+            "executive-sponsor",
+            "blocker",
+            "unknown"
+          ],
+          "description": "Functional role in the buying/retention process. Champion: internal advocate who drives adoption. Economic buyer: controls budget and signs contracts. Blocker: actively resists expansion or renewal.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "department",
+          "type": "string",
+          "constraints": [],
+          "description": "Organizational department (Engineering, Marketing, etc.)",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "seniority",
+          "type": "enum",
+          "constraints": [
+            "ic",
+            "manager",
+            "director",
+            "vp",
+            "c-level"
+          ],
+          "description": "Level in org hierarchy. Affects influence weight.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "is_internal",
+          "type": "boolean",
+          "constraints": [],
+          "description": "True if this contact is our employee (CSM, AE, SE). Internal contacts are modeled as Contacts so they can participate in relationships like OWNS and ENGAGED_WITH.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "last_engaged",
+          "type": "datetime",
+          "constraints": [],
+          "description": "Timestamp of most recent interaction (email, meeting, login).",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "engagement_score",
+          "type": "float",
+          "constraints": [
+            "0.0 .. 100.0"
+          ],
+          "description": "Composite score based on recency, frequency, and depth of interactions.",
+          "annotations": {
+            "computed": "rules/scoring.lore#contact-engagement-score"
+          },
+          "reference_to": null
+        },
+        {
+          "name": "champion_strength",
+          "type": "float",
+          "constraints": [
+            "0.0 .. 1.0"
+          ],
+          "description": "For contacts with role = champion, how strong is their advocacy? Based on internal mentions, feature requests, reference willingness, executive access.",
+          "annotations": {
+            "computed": "rules/scoring.lore#champion-strength"
+          },
+          "reference_to": null
+        }
+      ],
+      "identity": "A contact is uniquely identified by email address.\nIf a person has multiple email addresses, the primary\n(work) email is canonical. Personal emails are stored\nas aliases but do not create separate contact records.",
+      "lifecycle": "",
+      "notes": "Contact enrichment runs via Clearbit on creation and\nmonthly thereafter. Title and seniority changes are\ntracked \u2014 a champion who gets promoted is a strong\nexpansion signal; a champion who leaves is a churn risk."
+    },
+    {
+      "name": "Feature",
+      "description": "A distinct capability within the platform that can be independently tracked for adoption, gated by tier, and used as a signal for expansion or stickiness. Features are the atomic unit of value delivery \u2014 the bridge between what we sell (Products) and what customers actually use (Usage).\n",
+      "inherits": null,
+      "attributes": [
+        {
+          "name": "name",
+          "type": "string",
+          "constraints": [
+            "required",
+            "unique"
+          ],
+          "description": "Feature name as it appears in the product UI and docs.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "slug",
+          "type": "string",
+          "constraints": [
+            "required",
+            "unique"
+          ],
+          "description": "Internal identifier used in telemetry events (e.g., \"workflow-automation\", \"custom-sql-query\").",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "category",
+          "type": "enum",
+          "constraints": [
+            "core",
+            "analytics",
+            "automation",
+            "integration",
+            "admin",
+            "security"
+          ],
+          "description": "Functional category. Used for grouping adoption metrics.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "available_in",
+          "type": "list<string>",
+          "constraints": [],
+          "description": "Which product tiers include this feature. E.g., [\"professional\", \"enterprise\"] means not in Starter.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "is_aha_moment",
+          "type": "boolean",
+          "constraints": [],
+          "description": "Whether this feature is an \"aha moment\" \u2014 a capability that, once adopted, dramatically increases retention. Aha moment features count 3x in adoption_score calculation.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "is_tier_gate",
+          "type": "boolean",
+          "constraints": [],
+          "description": "Whether this feature is a primary reason accounts upgrade to the next tier. Tier-gate features, when requested by a lower-tier account, are strong upgrade signals.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "stickiness_score",
+          "type": "float",
+          "constraints": [
+            "0.0 .. 1.0"
+          ],
+          "description": "How much adopting this feature increases retention. Based on historical cohort analysis. 1.0 = once adopted, account never churns. Updated quarterly by data team.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "adoption_prerequisite",
+          "type": "string",
+          "constraints": [
+            "optional"
+          ],
+          "description": "Feature slug that should be adopted first. Features have a natural adoption sequence \u2014 e.g., \"basic-reporting\" should be adopted before \"cohort-analysis\".",
+          "annotations": {},
+          "reference_to": null
+        }
+      ],
+      "identity": "Features are uniquely identified by slug. The slug matches\nthe telemetry event namespace so we can directly link feature\nadoption tracking to the ontology.",
+      "lifecycle": "Features go through maturity stages:\n- **Beta**: available to opt-in accounts, not in official tier.\n- **GA (General Availability)**: included in tier, fully supported.\n- **Sunset**: being replaced, existing users grandfathered.\n\nFeature lifecycle changes should be tracked as observations\nbecause they affect signal interpretation \u2014 a usage decline\nin a sunsetting feature is not a churn signal.",
+      "notes": "The current feature inventory:\n\n**Core features** (all tiers):\n- Dashboard (`dashboard`) \u2014 the home screen, always adopted\n- Team inbox (`team-inbox`) \u2014 shared communication\n- Basic reporting (`basic-reporting`) \u2014 standard charts and tables\n- Contact management (`contact-mgmt`) \u2014 CRM-like contact records\n- Task management (`task-mgmt`) \u2014 assignment and tracking\n\n**Analytics features** (Professional+):\n- Advanced analytics (`advanced-analytics`) \u2014 @aha_moment\n- Cohort analysis (`cohort-analysis`) \u2014 requires advanced-analytics\n- Funnel visualization (`funnel-viz`) \u2014 requires advanced-analytics\n- Custom SQL queries (`custom-sql-query`) \u2014 Analytics add-on only\n- Predictive dashboards (`predictive-dashboards`) \u2014 Analytics add-on only\n- Scheduled reports (`scheduled-reports`) \u2014 Analytics add-on only\n\n**Automation features** (Professional+):\n- Workflow automation (`workflow-automation`) \u2014 @aha_moment, @tier_gate\n- Custom fields (`custom-fields`)\n- Conditional logic (`conditional-logic`) \u2014 requires workflow-automation\n- Approval chains (`approval-chains`) \u2014 requires workflow-automation\n\n**Integration features** (varies by tier):\n- Native integrations (`native-integrations`) \u2014 5 on Starter, 25 on Pro, unlimited on Enterprise\n- API access (`api-access`) \u2014 @tier_gate, Professional+ only\n- Webhooks (`webhooks`) \u2014 Professional+\n- Data Export (`data-export`) \u2014 Data Export add-on only, @aha_moment\n\n**Security & Admin features** (Enterprise only):\n- SSO/SAML (`sso-saml`) \u2014 @tier_gate, #1 reason for Enterprise upgrade\n- Audit logging (`audit-log`) \u2014 @tier_gate, compliance requirement\n- Custom data retention (`data-retention`) \u2014 Enterprise only\n- Role-based access control (`rbac`) \u2014 basic in Pro, advanced in Enterprise\n\nThe three highest-impact features for expansion:\n1. Workflow automation \u2014 once a team automates their first process,\n   they build more. This is the feature that makes Professional sticky.\n2. API access \u2014 signals that the account is integrating deeply.\n   API-active accounts have 85% retention.\n3. SSO/SAML \u2014 the #1 Enterprise upgrade trigger. When security/IT\n   asks about SSO, the upgrade conversation has already started.",
+      "provenance": {
+        "author": "product-team",
+        "source": "domain-expert",
+        "confidence": 0.9,
+        "created": "2025-01-15"
+      },
+      "status": "stable"
+    },
+    {
+      "name": "Interaction",
+      "description": "Any engagement touchpoint between us and an account's contacts. Interactions are the raw signal layer \u2014 patterns in interactions reveal expansion readiness, churn risk, and relationship health.\n",
+      "inherits": null,
+      "attributes": [
+        {
+          "name": "type",
+          "type": "enum",
+          "constraints": [
+            "email",
+            "meeting",
+            "call",
+            "support-ticket",
+            "product-feedback",
+            "webinar",
+            "event",
+            "chat"
+          ],
+          "description": "Channel of interaction.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "direction",
+          "type": "enum",
+          "constraints": [
+            "inbound",
+            "outbound"
+          ],
+          "description": "Did the customer initiate or did we?",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "timestamp",
+          "type": "datetime",
+          "constraints": [
+            "required"
+          ],
+          "description": "When the interaction occurred.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "participants",
+          "type": "list<reference>",
+          "constraints": [],
+          "description": "All contacts involved (both internal and external).",
+          "annotations": {},
+          "reference_to": "Contact"
+        },
+        {
+          "name": "sentiment",
+          "type": "enum",
+          "constraints": [
+            "positive",
+            "neutral",
+            "negative",
+            "unknown"
+          ],
+          "description": "Detected sentiment. For emails and tickets, derived via NLP. For meetings, from call transcript analysis.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "topics",
+          "type": "list<string>",
+          "constraints": [],
+          "description": "Key topics discussed. Extracted from transcripts, email body, or ticket tags.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "summary",
+          "type": "text",
+          "constraints": [],
+          "description": "Brief summary of the interaction. Auto-generated from transcripts or email content.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "is_executive",
+          "type": "boolean",
+          "constraints": [],
+          "description": "True if any participant has seniority = vp or c-level. Executive engagement is a strong health signal.",
+          "annotations": {},
+          "reference_to": null
+        }
+      ],
+      "identity": "",
+      "lifecycle": "",
+      "notes": "Interaction frequency patterns are more predictive than\nabsolute counts. An account that typically has 10 interactions\nper month dropping to 3 is a stronger churn signal than an\naccount that always has 3 per month.\n\nSupport ticket interactions with negative sentiment that\nmention \"competitor\" or \"alternative\" in topics should\ntrigger immediate CSM alert regardless of health score."
+    },
+    {
+      "name": "Opportunity",
+      "description": "A potential revenue event \u2014 new business, expansion, or renewal. Opportunities track the commercial pipeline and are the unit of GTM forecasting.\n",
+      "inherits": null,
+      "attributes": [
+        {
+          "name": "name",
+          "type": "string",
+          "constraints": [
+            "required"
+          ],
+          "description": "Descriptive name (e.g., \"Acme Corp - Enterprise Upgrade Q2\").",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "type",
+          "type": "enum",
+          "constraints": [
+            "new-business",
+            "expansion",
+            "renewal",
+            "win-back"
+          ],
+          "description": "The commercial motion this opportunity represents.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "stage",
+          "type": "enum",
+          "constraints": [
+            "discovery",
+            "qualification",
+            "evaluation",
+            "negotiation",
+            "closed-won",
+            "closed-lost"
+          ],
+          "description": "Current pipeline stage.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "amount",
+          "type": "float",
+          "constraints": [],
+          "description": "Projected ARR value if closed-won.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "close_date",
+          "type": "date",
+          "constraints": [],
+          "description": "Expected close date.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "probability",
+          "type": "float",
+          "constraints": [
+            "0.0 .. 1.0"
+          ],
+          "description": "Win probability based on stage and engagement signals.",
+          "annotations": {
+            "computed": "rules/scoring.lore#opportunity-probability"
+          },
+          "reference_to": null
+        },
+        {
+          "name": "source",
+          "type": "enum",
+          "constraints": [
+            "csm-identified",
+            "agent-recommended",
+            "ae-created",
+            "product-led",
+            "inbound"
+          ],
+          "description": "How this opportunity was generated. Agent-recommended means the AI expansion agent identified and proposed it.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "products",
+          "type": "list<reference>",
+          "constraints": [],
+          "description": "Which products are included in this opportunity.",
+          "annotations": {},
+          "reference_to": "Product"
+        },
+        {
+          "name": "primary_contact",
+          "type": "reference",
+          "constraints": [],
+          "description": "Main point of contact for this deal.",
+          "annotations": {},
+          "reference_to": "Contact"
+        },
+        {
+          "name": "champion",
+          "type": "reference",
+          "constraints": [
+            "optional"
+          ],
+          "description": "Internal champion advocating for this deal.",
+          "annotations": {},
+          "reference_to": "Contact"
+        },
+        {
+          "name": "blockers",
+          "type": "list<string>",
+          "constraints": [],
+          "description": "Known obstacles to closing (budget freeze, competing priority, technical concern, etc.)",
+          "annotations": {},
+          "reference_to": null
+        }
+      ],
+      "identity": "",
+      "lifecycle": "",
+      "notes": "Expansion opportunities are the primary output of the\nrevenue expansion agent. When the agent identifies an\nexpansion signal, it creates an opportunity recommendation\nwith pre-populated fields based on the signal analysis.\n\nAn opportunity without an identified champion has a\nhistorically 3x lower close rate and should be flagged."
+    },
+    {
+      "name": "Play",
+      "description": "A recommended GTM action in response to a signal or account state. Plays bridge the gap between \"the agent detected something\" and \"here's what the human should do.\" They are prescriptive but not scripts \u2014 they require human judgment, account context, and relationship awareness to execute.\n",
+      "inherits": null,
+      "attributes": [
+        {
+          "name": "name",
+          "type": "string",
+          "constraints": [
+            "required",
+            "unique"
+          ],
+          "description": "Play name as referenced by rules and signals.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "trigger_signal",
+          "type": "string",
+          "constraints": [],
+          "description": "The signal type that typically activates this play. References taxonomies/signal-types.lore node names.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "owner_role",
+          "type": "enum",
+          "constraints": [
+            "csm",
+            "ae",
+            "se",
+            "csm-manager",
+            "ae-manager"
+          ],
+          "description": "Who is responsible for executing this play.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "urgency",
+          "type": "enum",
+          "constraints": [
+            "immediate",
+            "this-week",
+            "this-quarter",
+            "opportunistic"
+          ],
+          "description": "How quickly the play should be executed after trigger. Immediate: same business day. This-week: within 5 business days. This-quarter: fit into regular cadence. Opportunistic: execute when natural touchpoint arises.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "segment_applicability",
+          "type": "list<string>",
+          "constraints": [],
+          "description": "Which account segments this play applies to. E.g., [\"enterprise\", \"mid-market\"] means not for SMB.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "prerequisites",
+          "type": "list<string>",
+          "constraints": [],
+          "description": "What must be true before executing. E.g., \"champion identified\" or \"usage data available for 30+ days.\"",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "success_metric",
+          "type": "text",
+          "constraints": [],
+          "description": "How to measure whether this play worked.",
+          "annotations": {},
+          "reference_to": null
+        }
+      ],
+      "identity": "",
+      "lifecycle": "",
+      "notes": "Plays are NOT automated actions. The agent recommends a play;\na human decides whether and how to execute it. The agent should\ninclude play context when creating signals so the CSM/AE\nunderstands the \"why\" behind the recommendation.\n\nCurrent playbook:\n\n**Expansion Plays:**\n\n*Proactive Seat Expansion* (trigger: Feature Ceiling Hit / seat utilization > 85%)\n- Owner: AE | Urgency: this-week | Segments: all\n- Approach: reach out before they hit the limit. Frame as\n  \"I noticed your team is growing \u2014 let's make sure you have\n  room.\" Offer volume discount for annual commitment at\n  higher seat count. Do NOT wait for them to ask.\n- Success: seat expansion closed within 30 days.\n\n*Tier Upgrade Conversation* (trigger: tier-upgrade-readiness)\n- Owner: AE with CSM warm intro | Urgency: this-quarter | Segments: all\n- Approach: CSM introduces the AE as someone who can help\n  with the \"next phase.\" Frame around unlocking value, not\n  increasing spend. Lead with the 2-3 features they'd gain\n  that directly map to their heaviest usage patterns.\n  Never cold-pitch an upgrade \u2014 always tie to observed need.\n- Prerequisites: adoption_score > 0.8, usage_trend = growing\n- Success: upgrade opportunity created within 60 days.\n\n*Analytics Add-On Pitch* (trigger: heavy basic reporting + CSV exports)\n- Owner: CSM | Urgency: opportunistic | Segments: professional, enterprise\n- Approach: during a regular check-in, ask \"I noticed your\n  team runs a lot of reports \u2014 would it save time if those\n  were predictive and auto-delivered?\" Position as a time-saver,\n  not a cost. Offer a 14-day trial of Analytics.\n- Prerequisites: 2+ months of active basic reporting\n- Success: Analytics trial started within 30 days.\n\n*Whitespace Discovery* (trigger: multi-signal-expansion)\n- Owner: AE | Urgency: this-quarter | Segments: mid-market, enterprise\n- Approach: full product-fit analysis. Map current usage to\n  catalog gaps. Build a 12-month expansion plan with the\n  champion. Position as strategic partnership, not upsell.\n- Prerequisites: champion identified, health_score > 70\n- Success: expansion opportunity with 2+ products created.\n\n**Retention Plays:**\n\n*Value Realization Check-In* (trigger: Usage Decline)\n- Owner: CSM | Urgency: this-week | Segments: all\n- Approach: do NOT lead with \"we noticed your usage dropped.\"\n  Instead: \"I wanted to check in on your team's priorities\n  this quarter \u2014 are there areas where we could help more?\"\n  Listen for: changed priorities, team turnover, lost champion,\n  product frustration. Then address the real issue.\n- Success: usage trend stabilizes within 30 days.\n\n*Champion Succession* (trigger: Champion Departure)\n- Owner: CSM | Urgency: immediate | Segments: all\n- Approach: confirm the departure. Identify the 2-3 most\n  engaged remaining contacts. Invest heavily in the strongest\n  candidate \u2014 schedule 1:1, share success playbooks, make them\n  feel important. If no internal candidate, request exec\n  sponsor introduction to their replacement.\n- Escalation: if no replacement identified in 30 days,\n  CSM manager intervenes with executive outreach.\n- Success: new champion identified within 30 days.\n\n*Competitive Counter* (trigger: Competitor Mention)\n- Owner: CSM + AE together | Urgency: immediate | Segments: all\n- Approach: don't be defensive. Ask: \"What prompted you to\n  look at alternatives?\" Listen to the real gap. If it's a\n  feature gap, check roadmap. If it's price, do value analysis.\n  If it's relationship, escalate. Pull competitive intel from\n  the Competitor entity for specific counter-positioning.\n- Prerequisites: competitor identified (check aliases)\n- Success: account remains through next renewal.\n\n*Renewal Preparation* (trigger: Renewal Approaching, 90 days out)\n- Owner: CSM | Urgency: this-quarter (start 90 days before)\n- Approach: build renewal case 90 days before renewal date.\n  Compile: usage metrics, value delivered (time saved, outcomes),\n  ROI narrative, and expansion opportunity. If health < 60,\n  activate retention plays first. If health > 70, turn renewal\n  into expansion conversation.\n- Prerequisites: usage data for 3+ months\n- Success: renewal closed at same or higher ARR.",
+      "provenance": {
+        "author": "revops-team",
+        "source": "domain-expert",
+        "confidence": 0.85,
+        "created": "2025-02-01"
+      },
+      "status": "stable"
+    },
+    {
+      "name": "Product",
+      "description": "A product or plan that we sell. Products are the units of our catalog \u2014 accounts subscribe to products, and expansion happens when accounts add new products or upgrade existing ones. See glossary/products.lore for canonical definitions and taxonomies/product-catalog.lore for the full hierarchy.\n",
+      "inherits": null,
+      "attributes": [
+        {
+          "name": "name",
+          "type": "string",
+          "constraints": [
+            "required",
+            "unique"
+          ],
+          "description": "Product name as it appears in pricing page and contracts.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "sku",
+          "type": "string",
+          "constraints": [
+            "required",
+            "unique"
+          ],
+          "description": "Internal product identifier.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "tier",
+          "type": "enum",
+          "constraints": [
+            "starter",
+            "professional",
+            "enterprise"
+          ],
+          "description": "Pricing tier. Determines feature set and limits. See taxonomies/product-catalog.lore for full tier details.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "base_price_monthly",
+          "type": "float",
+          "constraints": [],
+          "description": "List price per seat per month before discounts. Enterprise is annual-only: multiply by 12 \u00d7 seat minimum.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "pricing_model",
+          "type": "enum",
+          "constraints": [
+            "per-seat",
+            "flat-fee",
+            "one-time"
+          ],
+          "description": "How this product is billed. Core tiers are per-seat. Data Export is flat-fee. Services are one-time.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "minimum_seats",
+          "type": "int",
+          "constraints": [
+            "optional"
+          ],
+          "description": "Minimum seat count for this product. Enterprise = 50. Below this, the account should be on a lower tier.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "category",
+          "type": "enum",
+          "constraints": [
+            "core-platform",
+            "add-on",
+            "professional-services"
+          ],
+          "description": "Core platform is the main product. Add-ons extend it. Professional services are implementation/consulting.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "available_with",
+          "type": "list<string>",
+          "constraints": [
+            "optional"
+          ],
+          "description": "Which tiers this product can be attached to. E.g., Analytics add-on: [\"professional\", \"enterprise\"]. Empty means available to all tiers.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "features",
+          "type": "list<string>",
+          "constraints": [],
+          "description": "Key feature slugs included in this product. Maps to Feature.slug for adoption tracking and whitespace analysis.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "upgrade_path",
+          "type": "reference",
+          "constraints": [
+            "optional"
+          ],
+          "description": "The natural next product for accounts on this plan. Starter -> Professional -> Enterprise.",
+          "annotations": {},
+          "reference_to": "Product"
+        },
+        {
+          "name": "typical_sales_cycle_days",
+          "type": "int",
+          "constraints": [
+            "optional"
+          ],
+          "description": "Average days from opportunity creation to close. Starter: 1 (self-serve), Professional: 14, Enterprise: 45.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "attach_rate",
+          "type": "float",
+          "constraints": [
+            "0.0 .. 1.0] [optional"
+          ],
+          "description": "Current penetration for add-on products within their eligible base. Updated quarterly by RevOps.",
+          "annotations": {
+            "computed": "rules/scoring.lore#adoption-score"
+          },
+          "reference_to": null
+        }
+      ],
+      "identity": "Products are uniquely identified by SKU. Product names can\nchange (marketing rebranding) but SKUs are permanent.",
+      "lifecycle": "",
+      "notes": "Expansion revenue can come from three motions:\n1. **Seat expansion** (more users on same plan) \u2014 frictionless,\n   often doesn't need AE involvement. Triggered by seat\n   utilization > 85%.\n2. **Tier upgrade** (Starter -> Professional -> Enterprise) \u2014\n   highest ACV impact but requires champion + business case.\n   Triggered by feature ceiling, security requirements, or\n   user count exceeding tier limits.\n3. **Add-on attach** (Analytics or Data Export added) \u2014\n   medium ACV, targeted pitch. Triggered by usage patterns\n   that indicate the account is doing manually what the\n   add-on automates.\n\nThe agent should understand which motion fits each account\nand recommend the right play. A Professional account with\n50+ users and security requests is an Enterprise upgrade\ncandidate. A Professional account that runs 30 reports\na month is an Analytics attach candidate. Both are\n\"expansion\" but the play is completely different.\n\nProfessional services are not recurring revenue but they\nare a leading indicator of retention and expansion. The\nagent should recommend services alongside product sales \u2014\nan Enterprise upgrade without implementation services\nleads to 40% lower adoption at 90 days.",
+      "provenance": {
+        "author": "product-team",
+        "source": "domain-expert",
+        "confidence": 0.95,
+        "created": "2025-01-15"
+      },
+      "status": "stable"
+    },
+    {
+      "name": "Signal",
+      "description": "A detected event or pattern that indicates a change in account trajectory \u2014 either toward expansion or toward churn. Signals are the AI agent's primary input for generating recommendations.\n",
+      "inherits": null,
+      "attributes": [
+        {
+          "name": "type",
+          "type": "reference",
+          "constraints": [],
+          "description": "Classification of the signal per taxonomies/signal-types.lore",
+          "annotations": {},
+          "reference_to": "SignalType"
+        },
+        {
+          "name": "strength",
+          "type": "enum",
+          "constraints": [
+            "strong",
+            "moderate",
+            "weak"
+          ],
+          "description": "Confidence level based on signal clarity and historical predictive value.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "direction",
+          "type": "enum",
+          "constraints": [
+            "expansion",
+            "contraction",
+            "neutral"
+          ],
+          "description": "Whether this signal suggests growth or risk.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "detected_at",
+          "type": "datetime",
+          "constraints": [
+            "required"
+          ],
+          "description": "When the signal was first detected.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "source_data",
+          "type": "text",
+          "constraints": [],
+          "description": "Raw evidence that generated this signal. Could be a usage metric change, an email excerpt, a support ticket, or a product event.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "constraints": [
+            "new",
+            "acknowledged",
+            "actioned",
+            "dismissed"
+          ],
+          "description": "Workflow status. New signals need review; actioned means a play has been triggered.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "recommended_play",
+          "type": "string",
+          "constraints": [
+            "optional"
+          ],
+          "description": "The GTM play the agent recommends based on this signal. References a playbook entry.",
+          "annotations": {},
+          "reference_to": null
+        }
+      ],
+      "identity": "",
+      "lifecycle": "",
+      "notes": "Signals are ephemeral \u2014 they represent a point-in-time\nobservation. Multiple related signals may be clustered\ninto a \"signal group\" that tells a coherent story. For\nexample: usage spike + new department onboarded + executive\nmeeting requested = strong expansion signal cluster.\n\nSignal detection runs daily. Historical signals older than\n90 days that were never actioned are auto-archived."
+    },
+    {
+      "name": "Subscription",
+      "description": "An active or historical contract between us and an account. Subscriptions are the revenue unit \u2014 ARR, expansion, and contraction are measured at the subscription level and aggregated to the account.\n",
+      "inherits": null,
+      "attributes": [
+        {
+          "name": "subscription_id",
+          "type": "string",
+          "constraints": [
+            "required",
+            "unique"
+          ],
+          "description": "Billing system identifier (Stripe subscription ID).",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "plan",
+          "type": "reference",
+          "constraints": [],
+          "description": "The product/plan this subscription covers.",
+          "annotations": {},
+          "reference_to": "Product"
+        },
+        {
+          "name": "status",
+          "type": "enum",
+          "constraints": [
+            "active",
+            "past-due",
+            "cancelled",
+            "trialing"
+          ],
+          "description": "Billing status from payment system.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "arr_amount",
+          "type": "float",
+          "constraints": [],
+          "description": "Annualized value of this subscription.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "start_date",
+          "type": "date",
+          "constraints": [],
+          "description": "Contract start date.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "renewal_date",
+          "type": "date",
+          "constraints": [],
+          "description": "Next renewal date. Critical for renewal forecasting.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "contract_term_months",
+          "type": "int",
+          "constraints": [],
+          "description": "Length of current contract term.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "seats_purchased",
+          "type": "int",
+          "constraints": [],
+          "description": "Number of licensed seats.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "seats_active",
+          "type": "int",
+          "constraints": [],
+          "description": "Number of seats with active usage in last 30 days.",
+          "annotations": {
+            "computed": "rules/scoring.lore#active-seats"
+          },
+          "reference_to": null
+        },
+        {
+          "name": "seat_utilization",
+          "type": "float",
+          "constraints": [
+            "0.0 .. 1.0"
+          ],
+          "description": "seats_active / seats_purchased. Below 0.6 is a contraction risk signal.",
+          "annotations": {
+            "computed": "rules/scoring.lore#seat-utilization"
+          },
+          "reference_to": null
+        },
+        {
+          "name": "expansion_eligible",
+          "type": "boolean",
+          "constraints": [],
+          "description": "Whether this subscription is eligible for upsell or expansion based on plan type and contract terms.",
+          "annotations": {},
+          "reference_to": null
+        }
+      ],
+      "identity": "",
+      "lifecycle": "",
+      "notes": "Multi-product accounts have multiple subscriptions. Revenue\nmovements (expansion, contraction, churn) are tracked as\nchanges between subscription snapshots taken monthly.\nA subscription with seat_utilization < 0.5 that is within\n90 days of renewal is a high-priority contraction risk."
+    },
+    {
+      "name": "Usage",
+      "description": "Aggregated product usage metrics for an account over a time period. Usage is the strongest leading indicator of both expansion and churn \u2014 it reveals whether the customer is getting value from the product.\n",
+      "inherits": null,
+      "attributes": [
+        {
+          "name": "period",
+          "type": "enum",
+          "constraints": [
+            "daily",
+            "weekly",
+            "monthly"
+          ],
+          "description": "Aggregation period for this usage record.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "period_start",
+          "type": "date",
+          "constraints": [
+            "required"
+          ],
+          "description": "Start of the measurement period.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "active_users",
+          "type": "int",
+          "constraints": [],
+          "description": "Unique users with at least one meaningful session.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "total_sessions",
+          "type": "int",
+          "constraints": [],
+          "description": "Total login sessions across all users.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "feature_adoption",
+          "type": "list<string>",
+          "constraints": [],
+          "description": "Which features were used this period. Compared against the account's entitled features to calculate adoption %.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "api_calls",
+          "type": "int",
+          "constraints": [],
+          "description": "For platform accounts, total API calls. Indicates depth of integration.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "data_volume_gb",
+          "type": "float",
+          "constraints": [],
+          "description": "Data processed or stored. Growth indicates deepening reliance on the platform.",
+          "annotations": {},
+          "reference_to": null
+        },
+        {
+          "name": "adoption_score",
+          "type": "float",
+          "constraints": [
+            "0.0 .. 1.0"
+          ],
+          "description": "Ratio of features used vs. features available on the account's current plan.",
+          "annotations": {
+            "computed": "rules/scoring.lore#adoption-score"
+          },
+          "reference_to": null
+        },
+        {
+          "name": "usage_trend",
+          "type": "enum",
+          "constraints": [
+            "growing",
+            "stable",
+            "declining"
+          ],
+          "description": "Direction of usage over the last 3 periods.",
+          "annotations": {
+            "computed": "rules/scoring.lore#usage-trend"
+          },
+          "reference_to": null
+        }
+      ],
+      "identity": "",
+      "lifecycle": "",
+      "notes": "Usage data is the most objective signal we have. Unlike\ninteractions (which can be gamed by an AE scheduling\nunnecessary check-ins), usage directly measures value\ndelivery.\n\nKey usage patterns to watch:\n- \"Aha moment\" features: If an account starts using\n  advanced analytics or workflow automation, they've\n  crossed a stickiness threshold.\n- Department spread: Usage from 1 department vs. 3+\n  departments is a fundamentally different expansion\n  posture.\n- Weekend/off-hours usage indicates the product has\n  become critical infrastructure, not just a nice-to-have."
+    }
+  ],
+  "relationships": [
+    {
+      "name": "HAS_SUBSCRIPTION",
+      "from": "Account",
+      "to": "Subscription",
+      "cardinality": "one-to-many",
+      "description": "An account can have multiple subscriptions (multi-product). All subscriptions roll up to the account's total ARR.",
+      "properties": []
+    },
+    {
+      "name": "HAS_CONTACT",
+      "from": "Account",
+      "to": "Contact",
+      "cardinality": "one-to-many",
+      "description": "Contacts belong to accounts. A contact can only belong to one account (if they move companies, a new contact record is created and linked via PREVIOUSLY_AT).",
+      "properties": []
+    },
+    {
+      "name": "SUBSCRIBES_TO",
+      "from": "Subscription",
+      "to": "Product",
+      "cardinality": "many-to-one",
+      "description": "Each subscription is for one product/plan. An account with multiple products has multiple subscriptions.",
+      "properties": []
+    },
+    {
+      "name": "HAS_OPPORTUNITY",
+      "from": "Account",
+      "to": "Opportunity",
+      "cardinality": "one-to-many",
+      "description": "Opportunities are attached to accounts. An account can have multiple open opportunities simultaneously.",
+      "properties": []
+    },
+    {
+      "name": "OWNS",
+      "from": "Contact",
+      "to": "Account",
+      "cardinality": "one-to-many",
+      "description": "Internal contacts (CSMs, AEs) own accounts. One person can own many accounts; an account has one CSM and one AE.",
+      "properties": [
+        {
+          "name": "role",
+          "type": "enum [csm, ae, se, executive-sponsor]",
+          "description": ""
+        },
+        {
+          "name": "since",
+          "type": "date",
+          "description": ""
+        }
+      ]
+    },
+    {
+      "name": "SUBSIDIARY_OF",
+      "from": "Account",
+      "to": "Account",
+      "cardinality": "many-to-one",
+      "description": "Parent/subsidiary relationship. Revenue may be reported at parent level for enterprise rollups.",
+      "properties": []
+    },
+    {
+      "name": "PARTICIPATED_IN",
+      "from": "Contact",
+      "to": "Interaction",
+      "cardinality": "many-to-many",
+      "description": "Contacts participate in interactions. Both internal (our team) and external (customer) contacts are linked.",
+      "properties": [
+        {
+          "name": "role",
+          "type": "enum [organizer, attendee, sender, recipient]",
+          "description": ""
+        }
+      ]
+    },
+    {
+      "name": "HAS_USAGE",
+      "from": "Account",
+      "to": "Usage",
+      "cardinality": "one-to-many",
+      "description": "Usage records are per account per period. An account accumulates usage records over time forming a time series.",
+      "properties": []
+    },
+    {
+      "name": "TRIGGERED",
+      "from": "Account",
+      "to": "Signal",
+      "cardinality": "one-to-many",
+      "description": "Signals are detected at the account level. An account can have many active signals simultaneously.",
+      "properties": []
+    },
+    {
+      "name": "GENERATED_FROM",
+      "from": "Signal",
+      "to": "Interaction",
+      "cardinality": "many-to-one [optional]",
+      "description": "Some signals originate from specific interactions (e.g., a negative sentiment support ticket generates a churn signal). Links signal to its evidence.",
+      "properties": []
+    },
+    {
+      "name": "GENERATED_FROM_USAGE",
+      "from": "Signal",
+      "to": "Usage",
+      "cardinality": "many-to-one [optional]",
+      "description": "Some signals originate from usage patterns (e.g., usage spike generates an expansion signal).",
+      "properties": []
+    },
+    {
+      "name": "RESULTED_IN",
+      "from": "Signal",
+      "to": "Opportunity",
+      "cardinality": "many-to-one [optional]",
+      "description": "When a signal is actioned and an opportunity is created, this links the signal to the outcome. Used for measuring signal-to-pipeline conversion.",
+      "properties": []
+    },
+    {
+      "name": "INCLUDES_FEATURE",
+      "from": "Product",
+      "to": "Feature",
+      "cardinality": "many-to-many",
+      "description": "Products include features. A feature can appear in multiple products (e.g., basic-reporting is in all tiers). The agent uses this to map what an account has access to versus what they're actually using.",
+      "properties": []
+    },
+    {
+      "name": "HAS_ADOPTED",
+      "from": "Account",
+      "to": "Feature",
+      "cardinality": "many-to-many",
+      "description": "Tracks which features an account is actively using. \"Adopted\" means the feature was used by 2+ users in the last 30 days. The gap between INCLUDES_FEATURE (what they have) and HAS_ADOPTED (what they use) is the adoption gap. When any user at this account first used this feature. Users who used this feature in the last 30 days. Trial: used 1-2 times. Light: weekly. Moderate: daily by some users. Heavy: daily by most users.",
+      "properties": [
+        {
+          "name": "first_used",
+          "type": "date",
+          "description": ""
+        },
+        {
+          "name": "monthly_active_users",
+          "type": "int",
+          "description": ""
+        },
+        {
+          "name": "adoption_depth",
+          "type": "enum [trial, light, moderate, heavy]",
+          "description": ""
+        }
+      ]
+    },
+    {
+      "name": "COMPETES_WITH",
+      "from": "Competitor",
+      "to": "Product",
+      "cardinality": "many-to-many",
+      "description": "Which of our products a competitor directly challenges. CompeteFlow competes with Professional. DataStack competes with Enterprise. \"Spreadsheets\" competes with Starter. What specifically overlaps (e.g., \"workflow automation\", \"enterprise security\", \"basic project management\").",
+      "properties": [
+        {
+          "name": "overlap_area",
+          "type": "string",
+          "description": ""
+        }
+      ]
+    },
+    {
+      "name": "LOST_TO",
+      "from": "Opportunity",
+      "to": "Competitor",
+      "cardinality": "many-to-one [optional]",
+      "description": "When a deal is closed-lost to a specific competitor. Critical for tracking competitive win/loss rates and understanding where we're weak. Primary reason for the loss (price, feature gap, etc.)",
+      "properties": [
+        {
+          "name": "loss_reason",
+          "type": "string",
+          "description": ""
+        }
+      ]
+    },
+    {
+      "name": "RECOMMENDS_PLAY",
+      "from": "Signal",
+      "to": "Play",
+      "cardinality": "many-to-one [optional]",
+      "description": "Links a detected signal to the recommended play. This replaces the free-text recommended_play field with a structured reference to the Play entity.",
+      "properties": []
+    },
+    {
+      "name": "REQUIRES_FEATURE",
+      "from": "Feature",
+      "to": "Feature",
+      "cardinality": "many-to-one [optional]",
+      "description": "Feature prerequisite chain. Cohort analysis requires advanced analytics. Conditional logic requires workflow automation. The agent uses this to understand adoption sequence \u2014 don't recommend an advanced feature if the prerequisite hasn't been adopted yet.",
+      "properties": []
+    }
+  ],
+  "traversals": [
+    {
+      "name": "revenue-by-product",
+      "path": "Account -[HAS_SUBSCRIPTION]-> Subscription -[SUBSCRIBES_TO]-> Product",
+      "description": "Answers: \"What products does this account use and what's the revenue for each?\""
+    },
+    {
+      "name": "account-portfolio",
+      "path": "Contact -[OWNS]-> Account -[HAS_SUBSCRIPTION]-> Subscription",
+      "description": "Answers: \"What's the total book of business for this CSM/AE?\" Used for workload balancing and quota tracking."
+    },
+    {
+      "name": "expansion-pipeline",
+      "path": "Account -[HAS_OPPORTUNITY]-> Opportunity -[type = expansion]",
+      "description": "Answers: \"What expansion deals are in flight for this account or across the portfolio?\""
+    },
+    {
+      "name": "parent-rollup",
+      "path": "Account -[SUBSIDIARY_OF]-> Account (recursive)",
+      "description": "Answers: \"What's the total ARR across the entire corporate hierarchy?\" Important for enterprise pricing and executive engagement strategy."
+    },
+    {
+      "name": "signal-to-evidence",
+      "path": "Signal -[GENERATED_FROM]-> Interaction -[PARTICIPATED_IN]- Contact",
+      "description": "Answers: \"What happened that triggered this signal, and who was involved?\" Essential for CSM context before taking action on a signal."
+    },
+    {
+      "name": "account-engagement-timeline",
+      "path": "Account -[HAS_CONTACT]-> Contact -[PARTICIPATED_IN]-> Interaction",
+      "description": "Answers: \"What's the full engagement history for this account?\" Ordered by timestamp, gives a narrative view of the relationship."
+    },
+    {
+      "name": "signal-to-revenue",
+      "path": "Signal -[RESULTED_IN]-> Opportunity -[stage = closed-won]",
+      "description": "Answers: \"How much pipeline and revenue have our signals generated?\" Key metric for proving AI agent ROI."
+    },
+    {
+      "name": "feature-adoption-gap",
+      "path": "Account -[HAS_SUBSCRIPTION]-> Subscription -[SUBSCRIBES_TO]-> Product -[INCLUDES_FEATURE]-> Feature",
+      "description": "Answers: \"What features does this account have access to?\" Compare against Account -[HAS_ADOPTED]-> Feature to find the adoption gap \u2014 features available but not used. Large adoption gaps in \"aha moment\" features are intervention opportunities (training, CSM check-in)."
+    },
+    {
+      "name": "competitive-exposure",
+      "path": "Account -[HAS_SUBSCRIPTION]-> Subscription -[SUBSCRIBES_TO]-> Product -[COMPETES_WITH]- Competitor",
+      "description": "Answers: \"Which competitors are relevant for this account based on what products they use?\" When a competitor-threat signal fires, this traversal identifies which competitor and pulls the counter-play."
+    },
+    {
+      "name": "signal-to-play",
+      "path": "Signal -[RECOMMENDS_PLAY]-> Play",
+      "description": "Answers: \"What should the CSM/AE do in response to this signal?\" Direct link from detection to action."
+    },
+    {
+      "name": "win-loss-by-competitor",
+      "path": "Opportunity -[LOST_TO]-> Competitor",
+      "description": "Answers: \"What's our win/loss rate against each competitor?\" Aggregated to update Competitor.win_rate_against quarterly."
+    },
+    {
+      "name": "feature-upgrade-path",
+      "path": "Feature -[REQUIRES_FEATURE]-> Feature",
+      "description": "Answers: \"What's the natural adoption sequence for this account?\" Used by the agent to recommend the NEXT feature to adopt, not skip ahead."
+    }
+  ],
+  "rules": [
+    {
+      "name": "champion-departure-alert",
+      "applies_to": "Account",
+      "severity": "critical",
+      "trigger": "Contact with role=champion becomes inactive or leaves",
+      "condition": "Contact WHERE account = this\nAND role = \"champion\"\nAND (last_engaged < now() - 60d OR title changed)",
+      "action": "Create Signal with type = \"Champion Departure\"\nSet signal.strength = \"strong\"\nSet signal.direction = \"contraction\"\nSet account.stage = \"at-risk\" IF health_score < 60\nNotify csm_owner immediately",
+      "prose": "Champion departure is historically our #1 churn predictor.\n  When detected, the CSM should:\n  1. Confirm whether the champion has left or changed roles\n  2. If left: identify and cultivate a new champion within 14 days\n  3. If changed roles: assess whether new role still touches product\n  4. Map the remaining stakeholder landscape \u2014 is there anyone\n     else who can advocate for renewal?\n\n  If no replacement champion is identified within 30 days,\n  escalate to CSM manager for executive intervention.",
+      "outputs": ""
+    },
+    {
+      "name": "usage-decline-alert",
+      "applies_to": "Account",
+      "severity": "warning",
+      "trigger": "Usage trend shifts to declining",
+      "condition": "usage.usage_trend = \"declining\"\nAND usage.active_users < 0.7 * avg(usage.active_users, last 3 months)",
+      "action": "Create Signal with type = \"Usage Decline\"\nSet signal.strength based on decline severity:\n- >40% decline: \"strong\"\n- 20-40% decline: \"moderate\"\nRecommended play: \"Value realization check-in \u2014 don't\nlead with 'we noticed your usage dropped.' Instead ask\nabout their current priorities and whether the product\nis aligned with what they need right now.\"",
+      "prose": "",
+      "outputs": ""
+    },
+    {
+      "name": "competitor-threat",
+      "applies_to": "Account",
+      "severity": "critical",
+      "trigger": "Competitor mentioned in interaction",
+      "condition": "Interaction WHERE account = this\nAND topics includes any of [\"competitor\", known_competitor_names]\nAND sentiment IN [\"negative\", \"neutral\"]\nAND timestamp > now() - 30d",
+      "action": "Create Signal with type = \"Competitor Mention\"\nSet signal.strength = \"strong\"\nSet signal.direction = \"contraction\"\nNotify csm_owner AND ae_owner immediately",
+      "prose": "Competitor mentions combined with negative sentiment are\n  an acute threat. The response must be fast and strategic \u2014\n  not defensive. The play is to understand what gap the\n  competitor appears to fill and address it directly.",
+      "outputs": ""
+    },
+    {
+      "name": "renewal-risk-scoring",
+      "applies_to": "Subscription",
+      "severity": "warning",
+      "trigger": "Subscription within 90 days of renewal",
+      "condition": "subscription.renewal_date < now() + 90d\nAND subscription.status = \"active\"\nEvaluate renewal risk based on composite factors:\n- Seat utilization < 0.6 \u2192 high contraction risk\n- Health score < 40 \u2192 high churn risk\n- No champion identified \u2192 elevated risk\n- No executive engagement in 90+ days \u2192 elevated risk\n- NRR trailing 12m < 0.9 \u2192 prior contraction pattern",
+      "action": "Calculate composite renewal risk score\nIf high risk: escalate to csm_owner + manager\nIf medium risk: add to CSM priority queue\nRecommended play depends on primary risk factor",
+      "prose": "",
+      "outputs": ""
+    },
+    {
+      "name": "multi-signal-expansion",
+      "applies_to": "Account",
+      "severity": "info",
+      "trigger": "Multiple expansion signals detected within 30 days",
+      "condition": "count(Signal WHERE account = this\nAND direction = \"expansion\"\nAND strength IN [\"strong\", \"moderate\"]\nAND detected_at > now() - 30d) >= 2",
+      "action": "Create Opportunity with type = \"expansion\"\nSet opportunity.source = \"agent-recommended\"\nCalculate recommended products via whitespace-analysis\nNotify ae_owner with signal summary",
+      "prose": "When multiple expansion signals cluster within a short\n  window, it indicates a genuine shift in account trajectory,\n  not just noise. The agent should synthesize the signals\n  into a narrative: \"Acme has added 15 new users from the\n  marketing team this month, hit their API rate limit twice,\n  and their VP of Engineering attended our webinar. This\n  suggests cross-departmental adoption momentum.\"",
+      "outputs": ""
+    },
+    {
+      "name": "whitespace-analysis",
+      "applies_to": "Account",
+      "severity": "info",
+      "trigger": "",
+      "condition": "account.stage = \"active\"\nAND account.health_score > 60\nFor each product in our catalog that the account does NOT\ncurrently subscribe to, evaluate fit based on:\n1. Are they using features that are precursors to this product?\n(e.g., using basic reporting heavily -> analytics add-on)\n2. Does their industry/segment typically adopt this product?\n3. Have similar accounts expanded into this product?\n4. Is there usage evidence of the need? (e.g., exporting\ndata to do externally what our add-on does natively)",
+      "action": "Attach whitespace analysis to account record\nRank products by fit score\nIf top product fit > 0.7, create expansion signal",
+      "prose": "",
+      "outputs": ""
+    },
+    {
+      "name": "seat-expansion-trigger",
+      "applies_to": "Subscription",
+      "severity": "info",
+      "trigger": "Seat utilization exceeds threshold",
+      "condition": "subscription.seat_utilization > 0.85\nAND subscription.status = \"active\"",
+      "action": "Create Signal with type = \"Feature Ceiling Hit\"\nSet signal.strength = \"strong\"\nSet signal.direction = \"expansion\"\nRecommended play: \"Proactive seat expansion offer \u2014\nreach out before they hit the limit. Offer volume\ndiscount for committing to higher seat count.\"",
+      "prose": "",
+      "outputs": ""
+    },
+    {
+      "name": "tier-upgrade-readiness",
+      "applies_to": "Account",
+      "severity": "info",
+      "trigger": "Account shows pattern of needing next-tier features",
+      "condition": "account.stage = \"active\"\nAND subscription.plan.tier IN [\"starter\", \"professional\"]\nAND usage.adoption_score > 0.8\nAND usage.usage_trend = \"growing\"\nAND account.health_score > 70\nThe account is getting maximum value from their current tier\nand showing growth signals. They are likely hitting limitations\nthat the next tier would resolve.",
+      "action": "Create Signal with type = \"Feature Ceiling Hit\"\nSet signal.direction = \"expansion\"\nRecommended play: \"Tier upgrade conversation \u2014 frame\naround unlocking value, not increasing spend. Lead with\nthe 2-3 features they'd gain that map to their usage\npatterns.\"",
+      "prose": "",
+      "outputs": ""
+    },
+    {
+      "name": "account-health-score",
+      "applies_to": "Account",
+      "severity": "info",
+      "trigger": "",
+      "condition": "",
+      "action": "",
+      "prose": "The health score is a weighted composite of four dimensions:\n\n  - **Product adoption** (30%): Based on usage.adoption_score\n    averaged over last 3 months. Higher adoption = getting\n    more value = healthier.\n\n  - **Engagement quality** (25%): Based on interaction recency,\n    frequency, and sentiment. Weighted toward recent interactions.\n    Executive engagement counts 2x.\n\n  - **Support health** (20%): Inverse of open ticket count and\n    average resolution time. Accounts with many open negative\n    tickets score low.\n\n  - **Commercial signals** (25%): Seat utilization, NRR trend,\n    on-time payments. An expanding account scores high; a\n    contracting one scores low.\n\n  Scores are recalculated daily. A drop of more than 15 points\n  in a single week triggers a CSM alert regardless of absolute score.",
+      "outputs": "Account.health_score"
+    },
+    {
+      "name": "contact-engagement-score",
+      "applies_to": "Contact",
+      "severity": "info",
+      "trigger": "",
+      "condition": "",
+      "action": "",
+      "prose": "Based on the contact's interaction history:\n  - Recency: When was their last interaction? (exponential decay)\n  - Frequency: How often do they engage per month?\n  - Depth: Are they just attending meetings or actively driving\n    discussions (organizer vs attendee, sender vs recipient)?\n  - Trend: Is engagement increasing or decreasing?\n\n  A contact with high engagement_score who suddenly drops is\n  a churn signal. A contact with increasing engagement who\n  has seniority >= director is an expansion signal.",
+      "outputs": "Contact.engagement_score"
+    },
+    {
+      "name": "champion-strength",
+      "applies_to": "Contact",
+      "severity": "info",
+      "trigger": "",
+      "condition": "",
+      "action": "",
+      "prose": "Only computed for contacts with role = \"champion\".\n  Based on:\n  - Internal advocacy actions (feature requests, case study\n    participation, reference calls)\n  - Executive access (can they get us meetings with VPs/C-level?)\n  - Adoption driving (did usage increase in their department?)\n  - Public advocacy (social mentions, conference talks, reviews)\n\n  A champion_strength > 0.8 is a \"power champion\" \u2014 these\n  accounts almost never churn. Below 0.3 means the champion\n  designation should be re-evaluated.",
+      "outputs": "Contact.champion_strength"
+    },
+    {
+      "name": "adoption-score",
+      "applies_to": "Usage",
+      "severity": "info",
+      "trigger": "",
+      "condition": "",
+      "action": "",
+      "prose": "Calculated as: count(features_used) / count(features_entitled)\n\n  Not all features are weighted equally. \"Aha moment\" features\n  (identified from historical activation analysis) count 3x:\n  - Workflow automation\n  - Custom dashboards\n  - API integration\n  - Team collaboration features",
+      "outputs": "Usage.adoption_score"
+    },
+    {
+      "name": "usage-trend",
+      "applies_to": "Usage",
+      "severity": "info",
+      "trigger": "",
+      "condition": "",
+      "action": "",
+      "prose": "Compare current period's active_users against the average\n  of the prior 3 periods:\n  - Growing: current > avg * 1.1 (>10% increase)\n  - Declining: current < avg * 0.8 (<20% decrease)\n  - Stable: everything else",
+      "outputs": "Usage.usage_trend"
+    },
+    {
+      "name": "seat-utilization",
+      "applies_to": "Subscription",
+      "severity": "info",
+      "trigger": "",
+      "condition": "",
+      "action": "",
+      "prose": "Simple ratio: seats_active / seats_purchased\n\n  Updated weekly. Uses 30-day active definition (at least\n  one meaningful session in the last 30 days).",
+      "outputs": "Subscription.seat_utilization"
+    },
+    {
+      "name": "opportunity-probability",
+      "applies_to": "Opportunity",
+      "severity": "info",
+      "trigger": "",
+      "condition": "",
+      "action": "",
+      "prose": "Base probability by stage:\n  - Discovery: 0.10\n  - Qualification: 0.25\n  - Evaluation: 0.50\n  - Negotiation: 0.75\n  - Closed-won: 1.00\n  - Closed-lost: 0.00\n\n  Modifiers:\n  - Champion identified: +0.15\n  - Executive sponsor engaged: +0.10\n  - Competitor active in deal: -0.15\n  - Previous expansion history: +0.10\n  - Budget confirmed: +0.10\n  - Blocker identified: -0.10\n\n  Capped at [0.05 .. 0.95] to avoid false certainty.",
+      "outputs": "Opportunity.probability"
+    },
+    {
+      "name": "active-seats",
+      "applies_to": "Subscription",
+      "severity": "info",
+      "trigger": "",
+      "condition": "",
+      "action": "",
+      "prose": "Count of unique users associated with this subscription\n  who had at least one meaningful session in the last 30 days.\n  A \"meaningful session\" is defined as: logged in AND performed\n  at least one action beyond viewing the dashboard.",
+      "outputs": "Subscription.seats_active"
+    }
+  ],
+  "taxonomies": [
+    {
+      "name": "ProductCatalog",
+      "description": "Our full product portfolio organized by category and tier. This taxonomy drives whitespace analysis \u2014 comparing what an account has versus what's available \u2014 and informs the expansion agent's product recommendations.\n",
+      "applied_to": "Product.category",
+      "tree": {
+        "name": "Platform",
+        "tags": [],
+        "description": "",
+        "children": [
+          {
+            "name": "Starter",
+            "tags": [
+              "entry-tier"
+            ],
+            "description": " $29/seat/month. Our entry point for teams under 20. Core dashboard, basic reporting, 5 integrations max. Most common entry: self-serve trial (14-day, no credit card). Conversion path: trial \u2192 monthly \u2192 annual after 3 months. Key limitation: no workflow automation, no API access. When accounts hit these walls, they're upgrade-ready.",
+            "children": []
+          },
+          {
+            "name": "Professional",
+            "tags": [
+              "mid-tier"
+            ],
+            "description": " $79/seat/month. Mid-market workhorse. Everything in Starter plus advanced analytics, workflow automation, custom fields, API access (10K calls/day), and 25 integrations. This is where the majority of expansion revenue concentrates. Accounts that adopt workflow automation have 3x retention. Key limitation: no SSO, no audit logs, no SLA. Ceiling signals: > 50 users, security review requests, procurement team involvement.",
+            "children": []
+          },
+          {
+            "name": "Enterprise",
+            "tags": [
+              "top-tier"
+            ],
+            "description": " $149/seat/month (annual contracts only, minimum 50 seats). Everything in Professional plus SSO/SAML, audit logging, SLA (99.95% uptime), dedicated CSM, unlimited integrations, API (100K calls/day), custom data retention policies. Average sales cycle: 45 days. Requires champion + exec sponsor. Enterprise accounts rarely churn (< 3% annual rate). Key signal for upgrade: procurement/security team engagement.",
+            "children": []
+          },
+          {
+            "name": "Add-Ons",
+            "tags": [],
+            "description": "",
+            "children": []
+          },
+          {
+            "name": "Advanced Analytics",
+            "tags": [
+              "analytics"
+            ],
+            "description": " $20/seat/month. Available on Professional and Enterprise. Predictive dashboards, cohort analysis, funnel visualization, custom SQL queries, scheduled report delivery. Accounts with this add-on have 40% lower churn \u2014 it's our single strongest stickiness feature. When you see an account exporting CSVs to do analysis in Sheets, that's the signal to pitch Analytics. Prerequisite behavior: heavy use of basic reporting for 2+ months.",
+            "children": []
+          },
+          {
+            "name": "Data Export",
+            "tags": [
+              "data-platform"
+            ],
+            "description": " $500/month flat fee (not per-seat). Available on Professional and Enterprise. Real-time sync to Snowflake, BigQuery, or Redshift. Signals deep platform commitment \u2014 once data flows into their warehouse, switching cost is extreme. Accounts with Data Export: 95% retention rate. Prerequisite behavior: API usage > 5K calls/day OR data_volume > 10GB OR mention of \"data warehouse\" in support.",
+            "children": []
+          },
+          {
+            "name": "Professional Services",
+            "tags": [],
+            "description": "",
+            "children": []
+          },
+          {
+            "name": "Implementation",
+            "tags": [
+              "services"
+            ],
+            "description": " $15K-$75K one-time, scoped by complexity. Standard (< 50 users): $15K, 3 weeks. Advanced (50-200 users, integrations): $35K, 6 weeks. Enterprise (200+ users, migration, custom): $75K, 12 weeks. Accounts that buy implementation onboard 3x faster and have 25% higher adoption scores at 90 days.",
+            "children": []
+          },
+          {
+            "name": "Training",
+            "tags": [
+              "services"
+            ],
+            "description": " $3K-$10K per session, virtual or on-site. Admin training (2 days): for the team managing the platform. End-user training (1 day): for daily users. Champion enablement (half day): specifically for advocates \u2014 teaches them how to drive adoption internally. Recurring quarterly training correlates with 20% higher NRR.",
+            "children": []
+          },
+          {
+            "name": "Migration",
+            "tags": [
+              "services"
+            ],
+            "description": " $20K-$100K, scoped by data complexity and source system. Common sources: Salesforce, HubSpot, legacy custom systems. Migration includes data mapping, validation, parallel run, and cutover support. Migration accounts have highest first-year retention (98%) because the switching cost becomes real.",
+            "children": []
+          }
+        ]
+      },
+      "inheritance_rules": "Products tagged @tag: entry-tier should trigger upgrade analysis\nwhen accounts show ceiling-hit signals (seat utilization > 85%,\nfeature adoption > 80%, or explicit feature requests for\ncapabilities in the next tier).\n\nProducts tagged @tag: services are not recurring revenue but\nstrongly correlate with retention. The agent should recommend\nservices when an account shows adoption struggles (adoption_score\n< 0.5 at 60 days) or when a new enterprise deal closes.\n\nProducts tagged @tag: analytics or @tag: data-platform are\nstickiness multipliers. The agent should proactively recommend\nthese when usage patterns suggest the account is doing manually\nwhat the add-on automates.",
+      "provenance": {
+        "author": "product-team",
+        "source": "domain-expert",
+        "confidence": 0.95,
+        "created": "2025-01-15"
+      },
+      "status": "stable"
+    },
+    {
+      "name": "SignalType",
+      "description": "Classification of signals that indicate account trajectory changes. Each signal type has a default direction (expansion or contraction) and historical predictive value.\n",
+      "applied_to": "Signal.type",
+      "tree": {
+        "name": "Signal",
+        "tags": [],
+        "description": "",
+        "children": [
+          {
+            "name": "Expansion Signal",
+            "tags": [
+              "expansion"
+            ],
+            "description": "",
+            "children": [
+              {
+                "name": "Usage Spike",
+                "tags": [
+                  "product-led"
+                ],
+                "description": " Active users or sessions increased >30% vs prior period.",
+                "children": []
+              },
+              {
+                "name": "New Department Adoption",
+                "tags": [
+                  "product-led"
+                ],
+                "description": " Users from a previously inactive department started using the product. Indicates organic spread.",
+                "children": []
+              },
+              {
+                "name": "Feature Ceiling Hit",
+                "tags": [
+                  "product-led"
+                ],
+                "description": " Account is at >90% of a plan limit (seats, API calls, storage). Natural upgrade trigger.",
+                "children": []
+              },
+              {
+                "name": "Executive Engagement",
+                "tags": [
+                  "relationship"
+                ],
+                "description": " VP+ level contact initiated engagement (meeting, email, event attendance). Signals strategic interest.",
+                "children": []
+              },
+              {
+                "name": "Expansion Request",
+                "tags": [
+                  "relationship"
+                ],
+                "description": " Contact explicitly asked about adding seats, products, or upgrading. Highest-intent signal.",
+                "children": []
+              },
+              {
+                "name": "Integration Deepening",
+                "tags": [
+                  "product-led"
+                ],
+                "description": " New API integrations deployed or data volume increased significantly. Indicates platform stickiness.",
+                "children": []
+              },
+              {
+                "name": "Positive Case Study",
+                "tags": [
+                  "relationship"
+                ],
+                "description": " Account agreed to be a reference or case study. Strong indicator of satisfaction and advocacy.",
+                "children": []
+              },
+              {
+                "name": "Hiring Signal",
+                "tags": [
+                  "external"
+                ],
+                "description": " Account is hiring roles that would use our product. Sourced from job board monitoring.",
+                "children": []
+              }
+            ]
+          },
+          {
+            "name": "Contraction Signal",
+            "tags": [
+              "contraction"
+            ],
+            "description": "",
+            "children": [
+              {
+                "name": "Usage Decline",
+                "tags": [
+                  "product-led"
+                ],
+                "description": " Active users or sessions decreased >20% vs prior period.",
+                "children": []
+              },
+              {
+                "name": "Champion Departure",
+                "tags": [
+                  "relationship"
+                ],
+                "description": " Contact with role=champion changed jobs or became inactive. Single strongest churn predictor.",
+                "children": []
+              },
+              {
+                "name": "Support Escalation",
+                "tags": [
+                  "relationship"
+                ],
+                "description": " Support ticket escalated to management or unresolved for >5 business days with negative sentiment.",
+                "children": []
+              },
+              {
+                "name": "Competitor Mention",
+                "tags": [
+                  "relationship"
+                ],
+                "description": " Competitor name mentioned in support ticket, email, or meeting transcript.",
+                "children": []
+              },
+              {
+                "name": "Seat Underutilization",
+                "tags": [
+                  "product-led"
+                ],
+                "description": " Seat utilization dropped below 50%. Account is paying for seats nobody uses.",
+                "children": []
+              },
+              {
+                "name": "Billing Issue",
+                "tags": [
+                  "commercial"
+                ],
+                "description": " Payment failed, invoice disputed, or billing support ticket opened.",
+                "children": []
+              },
+              {
+                "name": "Executive Disengagement",
+                "tags": [
+                  "relationship"
+                ],
+                "description": " No executive-level interaction in 90+ days for an enterprise account.",
+                "children": []
+              },
+              {
+                "name": "Budget/Reorg Signal",
+                "tags": [
+                  "external"
+                ],
+                "description": " News of layoffs, reorg, or budget cuts at the account. Sourced from news monitoring.",
+                "children": []
+              }
+            ]
+          },
+          {
+            "name": "Neutral Signal",
+            "tags": [
+              "neutral"
+            ],
+            "description": "",
+            "children": [
+              {
+                "name": "Renewal Approaching",
+                "tags": [
+                  "commercial"
+                ],
+                "description": " Subscription renewal within 90 days. Not inherently positive or negative but requires attention.",
+                "children": []
+              },
+              {
+                "name": "Stakeholder Change",
+                "tags": [
+                  "relationship"
+                ],
+                "description": " Key contact changed role or new contact joined. Could go either direction.",
+                "children": []
+              },
+              {
+                "name": "Product Update Relevant",
+                "tags": [
+                  "product-led"
+                ],
+                "description": " We shipped a feature the account had requested. Re-engagement opportunity.",
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      "inheritance_rules": "Signals tagged @tag: product-led can be detected purely from\ntelemetry data \u2014 no human input required. These should run\non automated daily detection.\n\nSignals tagged @tag: relationship require NLP analysis of\ninteraction content (emails, transcripts, tickets). These\nrun on interaction ingestion events.\n\nSignals tagged @tag: external require third-party data\nsources (job boards, news feeds). These run weekly."
+    }
+  ],
+  "glossary": [
+    {
+      "term": "ARR (Annual Recurring Revenue)",
+      "definition": "The annualized value of all active subscriptions for an\naccount. Calculated as monthly recurring revenue \u00d7 12.\nExcludes one-time fees, professional services, and\noverages. ARR is our primary revenue metric.\n\nDo NOT confuse with ACV (Annual Contract Value), which\nincludes one-time fees and is used for deal sizing."
+    },
+    {
+      "term": "NRR (Net Revenue Retention)",
+      "definition": "Trailing 12-month revenue from existing accounts divided\nby the revenue those same accounts had 12 months ago.\nIncludes expansion, contraction, and churn.\nNRR > 100% means existing accounts are growing net of churn.\n\nFormula: (Starting ARR + Expansion - Contraction - Churn) / Starting ARR\n\nDo NOT confuse with GRR (Gross Revenue Retention), which\nexcludes expansion and only measures contraction + churn."
+    },
+    {
+      "term": "Expansion Revenue",
+      "definition": "Net new ARR from existing customers. Sources include:\nseat expansion, tier upgrades, and add-on product purchases.\nDoes NOT include price increases at renewal \u2014 those are\nclassified as \"pricing uplift\" and tracked separately."
+    },
+    {
+      "term": "Contraction",
+      "definition": "Decrease in ARR from an existing account that remains a\ncustomer. Causes include: seat reduction, tier downgrade,\nor removal of an add-on product. An account can contract\nwithout churning."
+    },
+    {
+      "term": "Churn",
+      "definition": "Complete loss of an account's revenue. All subscriptions\ncancelled or not renewed. Measured as churned ARR / total\nARR at start of period. Churn is calculated at the account\nlevel, not the subscription level.\n\nVoluntary churn: customer chose to leave.\nInvoluntary churn: payment failure, account closure."
+    },
+    {
+      "term": "Whitespace",
+      "definition": "Products or capabilities in our catalog that a customer\ndoes not currently subscribe to but could benefit from.\nWhitespace analysis compares the account's current\nsubscriptions against the full product catalog, weighted\nby the account's usage patterns and industry benchmarks."
+    },
+    {
+      "term": "Champion",
+      "definition": "A contact at the customer who actively advocates for our\nproduct internally. Champions drive adoption, defend budget\nduring cuts, and expand usage to new teams. Identified by:\nhigh engagement score, proactive outreach, feature request\nfrequency, and willingness to do references.\n\nA champion is NOT just a power user. A power user uses the\nproduct a lot; a champion influences others to use it too."
+    },
+    {
+      "term": "Economic Buyer",
+      "definition": "The person who controls the budget and signs contracts.\nOften different from the champion. In enterprise accounts,\nthe economic buyer is typically VP+ level while the champion\nmay be a director or senior manager."
+    },
+    {
+      "term": "ICP (Ideal Customer Profile)",
+      "definition": "The firmographic and behavioral profile of accounts most\nlikely to become and remain successful customers. Our ICP\nis defined by: industry, employee count, tech stack,\nuse case alignment, and growth trajectory. ICP fit score\nmeasures how closely an account matches."
+    },
+    {
+      "term": "Health Score",
+      "definition": "A composite metric (0-100) reflecting the overall health of\nthe customer relationship. See rules/scoring.lore#account-health-score\nfor the calculation methodology. Health score is a lagging\nindicator \u2014 it reflects what has already happened. Signals\nare the leading indicators of where health is heading."
+    },
+    {
+      "term": "Signal",
+      "definition": "A detected event or pattern that predicts a change in\naccount trajectory. Signals are the primary input to the\nexpansion and churn detection engines. See\ntaxonomies/signal-types.lore for the full classification."
+    },
+    {
+      "term": "Play / Playbook",
+      "definition": "A recommended sequence of actions in response to a signal\nor account state. Plays are prescriptive \u2014 they tell the\nCSM or AE what to do, who to contact, and what messaging\nto use. Plays are NOT fully automated; they require human\njudgment and execution."
+    },
+    {
+      "term": "Book of Business",
+      "definition": "The set of accounts owned by a CSM or AE. Measured by\ntotal ARR, account count, and weighted pipeline. Used\nfor workload balancing and territory planning."
+    }
+  ],
+  "views": [
+    {
+      "name": "Account Executive",
+      "description": "Scoped perspective for Account Executives focused on expansion pipeline, deal progression, and revenue growth.\n",
+      "audience": "Account Executives, Sales Leadership",
+      "entities": [
+        "Account (segment, arr, stage, health_score, icp_fit_score, nrr_trailing_12m)",
+        "Contact (name, title, role, seniority, engagement_score, champion_strength)",
+        "Opportunity (all attributes)",
+        "Product (name, tier, base_price_monthly, upgrade_path)",
+        "Signal (type, strength, direction, recommended_play WHERE direction = expansion)"
+      ],
+      "relationships": [
+        "HAS_OPPORTUNITY",
+        "HAS_CONTACT",
+        "SUBSIDIARY_OF",
+        "revenue-by-product traversal",
+        "expansion-pipeline traversal",
+        "parent-rollup traversal"
+      ],
+      "rules": [
+        "multi-signal-expansion",
+        "whitespace-analysis",
+        "seat-expansion-trigger",
+        "tier-upgrade-readiness",
+        "opportunity-probability"
+      ],
+      "key_questions": [
+        "Which accounts in my book have the highest expansion potential?",
+        "What signals have fired for my accounts this week?",
+        "Where is there whitespace I haven't pursued?",
+        "What's the recommended play for this expansion signal?",
+        "How does this account's parent company rollup look?",
+        "Which deals need champion identification?"
+      ],
+      "not_in_scope": "Support ticket details, detailed usage telemetry, and churn\nintervention workflows. AEs see health scores and signals\nbut detailed churn management is the CSM's domain."
+    },
+    {
+      "name": "Customer Success Manager",
+      "description": "Scoped perspective for CSMs focused on account health, churn prevention, adoption, and renewal management.\n",
+      "audience": "Customer Success Managers, CS Leadership",
+      "entities": [
+        "Account (all attributes)",
+        "Contact (all attributes)",
+        "Subscription (all attributes)",
+        "Usage (all attributes)",
+        "Signal (all attributes)",
+        "Interaction (all attributes)"
+      ],
+      "relationships": [
+        "All commercial relationships",
+        "All engagement relationships",
+        "All traversals"
+      ],
+      "rules": [
+        "account-health-score",
+        "champion-departure-alert",
+        "usage-decline-alert",
+        "competitor-threat",
+        "renewal-risk-scoring",
+        "All scoring rules"
+      ],
+      "key_questions": [
+        "Which accounts need immediate attention?",
+        "What's driving this account's health score change?",
+        "Who is the champion and how strong is their advocacy?",
+        "What does the engagement timeline look like?",
+        "Is this account at risk for renewal?",
+        "What happened that triggered this churn signal?",
+        "Which accounts have declining usage trends?"
+      ],
+      "not_in_scope": "Deal negotiation details, discount approvals, and\ncompetitive pricing intelligence. CSMs flag expansion\nopportunities but hand off deal execution to AEs."
+    },
+    {
+      "name": "RevOps",
+      "description": "Full ontology view for Revenue Operations. RevOps sees everything \u2014 this view is the complete domain model used for analytics, forecasting, and system configuration.\n",
+      "audience": "RevOps, Data Engineering, Executive Leadership",
+      "entities": [
+        "All entities with all attributes"
+      ],
+      "relationships": [
+        "All relationships and traversals"
+      ],
+      "rules": [
+        "All rules"
+      ],
+      "key_questions": [
+        "What's our overall NRR and what's driving it?",
+        "How effective is the AI expansion agent? (signal-to-revenue)",
+        "Where are the systemic churn risk patterns?",
+        "How should we rebalance CSM book assignments?",
+        "What's the forecast for expansion pipeline this quarter?",
+        "Which signals have the highest conversion rate to closed-won?",
+        "Are there segments where our ICP scoring is miscalibrated?"
+      ],
+      "not_in_scope": ""
+    }
+  ],
+  "observations": [
+    {
+      "name": "Feature Adoption Pattern Analysis",
+      "about": "Feature",
+      "observed_by": "adoption-analysis-agent",
+      "date": "2025-06-25",
+      "observations": [
+        {
+          "heading": "Workflow automation is the Professional stickiness inflection",
+          "prose": "Analyzed 500+ Professional accounts over 18 months. Accounts\nthat adopt workflow-automation within the first 90 days have\na 92% 12-month retention rate vs. 68% for those who don't.\n\nThe adoption-prerequisite chain matters: accounts that go\ndashboard -> basic-reporting -> custom-fields -> workflow-automation\n(in that order) have the highest success. Accounts that jump\nstraight to workflow-automation without adopting custom-fields\nfirst tend to build brittle workflows and churn at month 6.\n\nRecommendation: the agent should track Feature adoption sequence,\nnot just adoption count. Skipped prerequisites are a risk signal."
+        },
+        {
+          "heading": "API access adoption predicts Enterprise readiness",
+          "prose": "Accounts on Professional that adopt api-access within their\nfirst 6 months upgrade to Enterprise at 3x the rate of\naccounts that don't. The mechanism is clear: API adoption\nsignals a technical team that's integrating deeply, which\ncreates both stickiness and the need for Enterprise features\n(higher rate limits, SSO for their engineering team).\n\nWhen the agent sees API usage > 5K calls/day on a Professional\naccount, it should create an Enterprise upgrade signal AND\na Data Export recommendation simultaneously. These almost\nalways travel together."
+        },
+        {
+          "heading": "Advanced Analytics has an adoption cliff at 2 weeks",
+          "prose": "Of accounts that trial the Analytics add-on, 60% convert if\nthey build a custom dashboard in the first 2 weeks. After\nthat, conversion drops to 15%. The \"aha moment\" is seeing\ntheir own data in a custom dashboard \u2014 not the pre-built ones.\n\nRecommendation: when an Analytics trial starts, the agent\nshould prompt the CSM to schedule a dashboard-building session\nwithin the first week. Don't wait for the customer to figure\nit out on their own."
+        },
+        {
+          "heading": "SSO requests are the most reliable Enterprise signal",
+          "prose": "In the last year, 85% of Professional accounts that requested\nSSO/SAML documentation upgraded to Enterprise within 6 months.\nThis is our single most reliable upgrade signal \u2014 more reliable\nthan seat count, usage growth, or executive engagement.\n\nThe reason: SSO requests come from security/IT teams, which\nmeans the account has crossed from \"team tool\" to \"company\ntool.\" Once IT is involved, they require compliance features\nthat only Enterprise provides.\n\nThe agent should treat any mention of \"SSO\", \"SAML\", \"single\nsign-on\", or \"security review\" in support tickets or meetings\nas a strong, immediate Enterprise upgrade signal."
+        }
+      ],
+      "confidence": 0.85,
+      "status": "proposed",
+      "provenance": {
+        "author": "adoption-analysis-agent",
+        "source": "ai-generated",
+        "confidence": 0.85,
+        "created": "2025-06-25"
+      }
+    },
+    {
+      "name": "Q2 Account Expansion Signals",
+      "about": "Account",
+      "observed_by": "expansion-agent-v2",
+      "date": "2025-06-15",
+      "observations": [
+        {
+          "heading": "Acme Corp shows expansion readiness",
+          "prose": "Acme Corp (acme.com) is showing classic multi-signal expansion\npatterns over the past 30 days:\n\n- Active users increased 45%, from 120 to 174\n- Three new departments started using the product\n- VP Engineering Sarah Chen attended the enterprise webinar\n- Support tickets shifted from \"how do I\" to \"can it also do\"\n\nThis pattern has historically preceded expansion in 78% of\nsimilar enterprise accounts. Recommend AE outreach within\n2 weeks, leading with the multi-department adoption story."
+        },
+        {
+          "heading": "Beta Corp usage decline looks seasonal",
+          "prose": "Beta Corp (beta.io) showed a 30% usage decline in Q4,\nbut this matches their industry's seasonal pattern. Three\nof their four peer accounts showed similar dips.\n\nThis is likely NOT a churn signal. The usage-decline-alert\nrule fired here but was a false positive. Consider adding\nseasonal adjustment to the rule."
+        },
+        {
+          "heading": "Gamma Inc rapid onboarding",
+          "prose": "Gamma Inc onboarded 50 users in their first week, well\nabove the typical 15-20 for their segment. Their champion\n(CTO) is highly engaged and has already asked about API\naccess and enterprise features.\n\nThis looks like a fast-track expansion candidate. The\nseat-expansion-trigger rule should fire within 2 weeks\nat this adoption rate."
+        }
+      ],
+      "confidence": 0.75,
+      "status": "proposed",
+      "provenance": {
+        "author": "expansion-agent-v2",
+        "source": "ai-generated",
+        "confidence": 0.75,
+        "created": "2025-06-15"
+      }
+    },
+    {
+      "name": "Signal Quality Review",
+      "about": "Signal",
+      "observed_by": "signal-audit-agent",
+      "date": "2025-06-20",
+      "observations": [
+        {
+          "heading": "Executive engagement signals are strongest predictor",
+          "prose": "After analyzing 200+ expansion outcomes over the past year,\nexecutive engagement (webinar attendance, feature requests from\nVP+ titles) is the single strongest predictor of expansion,\noutperforming usage metrics by a significant margin.\n\nCurrent signal weighting in the expansion detection rules\nunderweights executive engagement relative to raw usage growth.\nRecommend rebalancing."
+        },
+        {
+          "heading": "Usage decline signals need industry context",
+          "prose": "The usage-decline-alert rule fires uniformly across all\naccount segments, but decline patterns vary significantly\nby industry. Retail accounts show predictable seasonal dips\nin Q1 and Q4. SaaS accounts show usage decline during\nholiday periods but recover quickly.\n\nWithout industry context, the false positive rate for\nusage decline signals is approximately 35% for enterprise\naccounts in cyclical industries."
+        }
+      ],
+      "confidence": 0.82,
+      "status": "proposed",
+      "provenance": {
+        "author": "signal-audit-agent",
+        "source": "ai-generated",
+        "confidence": 0.82,
+        "created": "2025-06-20"
+      }
+    }
+  ],
+  "outcomes": [
+    {
+      "name": "Q2 2025 Retrospective",
+      "reviewed_by": "outcome-tracker-agent",
+      "date": "2025-07-01",
+      "outcomes": [
+        {
+          "heading": "Acme Corp expansion \u2014 correct",
+          "prose": "We predicted Acme Corp was expansion-ready (confidence: 0.82).\nThey expanded. Upsell closed 2025-06-28 for +$45K ARR,\nupgrading from Growth to Enterprise tier.\n\nThe VP Engineering engagement was the strongest signal \u2014\nshe championed the enterprise tier internally after the\nwebinar. The multi-department adoption pattern confirmed\nproduct-market fit at the organization level.",
+          "refs": [
+            "observations/q2-account-signals.lore#acme-corp-shows-expansion-readiness"
+          ],
+          "takeaways": [
+            "increase weight of executive engagement signals in the expansion detection rules",
+            "multi-department adoption should be a first-class signal type in the Signal entity"
+          ]
+        },
+        {
+          "heading": "Beta Corp churn risk \u2014 false positive",
+          "prose": "We flagged Beta Corp as churn risk (confidence: 0.68).\nThey renewed at the same tier. The usage decline was\nseasonal, as our observation suspected.\n\nThis is the third Q4 false positive from the\nusage-decline-alert rule in enterprise accounts in\ncyclical industries.",
+          "refs": [
+            "observations/q2-account-signals.lore#beta-corp-usage-decline-looks-seasonal",
+            "observations/signal-quality-review.lore#usage-decline-signals-need-industry-context"
+          ],
+          "takeaways": [
+            "the usage-decline-alert rule needs seasonal adjustment for cyclical industries",
+            "Account entity should track industry vertical to enable seasonal pattern detection"
+          ]
+        },
+        {
+          "heading": "Gamma Inc fast expansion \u2014 correct",
+          "prose": "We identified Gamma Inc as a fast-track expansion candidate.\nThey upgraded to the next tier within 3 weeks of onboarding,\nadding 30 more seats.\n\nThe rapid onboarding velocity was the key signal. CTO\nengagement and API access requests confirmed enterprise intent.",
+          "refs": [
+            "observations/q2-account-signals.lore#gamma-inc-rapid-onboarding"
+          ],
+          "takeaways": [
+            "rapid onboarding velocity (3x segment average) should trigger immediate AE notification",
+            "API access requests correlate strongly with enterprise expansion intent"
+          ]
+        }
+      ],
+      "provenance": {
+        "author": "outcome-tracker-agent",
+        "source": "ai-generated",
+        "confidence": 0.88,
+        "created": "2025-07-01"
+      },
+      "status": "proposed"
+    }
+  ]
+}

@@ -1,0 +1,81 @@
+---
+taxonomy: SignalType
+description: >
+  Classification of signals that indicate account trajectory
+  changes. Each signal type has a default direction (expansion
+  or contraction) and historical predictive value.
+applied_to: Signal.type
+---
+
+Signal
+├── Expansion Signal                          @tag: expansion
+│   ├── Usage Spike                           @tag: product-led
+│   │   | Active users or sessions increased >30% vs prior period.
+│   ├── New Department Adoption               @tag: product-led
+│   │   | Users from a previously inactive department started
+│   │   | using the product. Indicates organic spread.
+│   ├── Feature Ceiling Hit                   @tag: product-led
+│   │   | Account is at >90% of a plan limit (seats, API calls,
+│   │   | storage). Natural upgrade trigger.
+│   ├── Executive Engagement                  @tag: relationship
+│   │   | VP+ level contact initiated engagement (meeting,
+│   │   | email, event attendance). Signals strategic interest.
+│   ├── Expansion Request                     @tag: relationship
+│   │   | Contact explicitly asked about adding seats, products,
+│   │   | or upgrading. Highest-intent signal.
+│   ├── Integration Deepening                 @tag: product-led
+│   │   | New API integrations deployed or data volume increased
+│   │   | significantly. Indicates platform stickiness.
+│   ├── Positive Case Study                   @tag: relationship
+│   │   | Account agreed to be a reference or case study.
+│   │   | Strong indicator of satisfaction and advocacy.
+│   └── Hiring Signal                         @tag: external
+│       | Account is hiring roles that would use our product.
+│       | Sourced from job board monitoring.
+├── Contraction Signal                        @tag: contraction
+│   ├── Usage Decline                         @tag: product-led
+│   │   | Active users or sessions decreased >20% vs prior period.
+│   ├── Champion Departure                    @tag: relationship
+│   │   | Contact with role=champion changed jobs or became
+│   │   | inactive. Single strongest churn predictor.
+│   ├── Support Escalation                    @tag: relationship
+│   │   | Support ticket escalated to management or unresolved
+│   │   | for >5 business days with negative sentiment.
+│   ├── Competitor Mention                    @tag: relationship
+│   │   | Competitor name mentioned in support ticket, email,
+│   │   | or meeting transcript.
+│   ├── Seat Underutilization                 @tag: product-led
+│   │   | Seat utilization dropped below 50%. Account is paying
+│   │   | for seats nobody uses.
+│   ├── Billing Issue                         @tag: commercial
+│   │   | Payment failed, invoice disputed, or billing support
+│   │   | ticket opened.
+│   ├── Executive Disengagement               @tag: relationship
+│   │   | No executive-level interaction in 90+ days for an
+│   │   | enterprise account.
+│   └── Budget/Reorg Signal                   @tag: external
+│       | News of layoffs, reorg, or budget cuts at the account.
+│       | Sourced from news monitoring.
+└── Neutral Signal                            @tag: neutral
+    ├── Renewal Approaching                   @tag: commercial
+    │   | Subscription renewal within 90 days. Not inherently
+    │   | positive or negative but requires attention.
+    ├── Stakeholder Change                    @tag: relationship
+    │   | Key contact changed role or new contact joined.
+    │   | Could go either direction.
+    └── Product Update Relevant               @tag: product-led
+        | We shipped a feature the account had requested.
+        | Re-engagement opportunity.
+
+## Inheritance Rules
+
+Signals tagged @tag: product-led can be detected purely from
+telemetry data — no human input required. These should run
+on automated daily detection.
+
+Signals tagged @tag: relationship require NLP analysis of
+interaction content (emails, transcripts, tickets). These
+run on interaction ingestion events.
+
+Signals tagged @tag: external require third-party data
+sources (job boards, news feeds). These run weekly.

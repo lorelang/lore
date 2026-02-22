@@ -1,0 +1,123 @@
+---
+entity: Account
+description: >
+  A company that is a customer, prospect, or former customer.
+  Accounts are the primary commercial unit — all revenue,
+  contracts, and engagement roll up to the account level.
+---
+
+## Attributes
+
+name: string [required, unique]
+  | Legal entity name or commonly used company name.
+
+domain: string [unique]
+  | Primary web domain (e.g., acme.com). Used for identity
+  | resolution and enrichment.
+
+industry: string
+  | Industry vertical per our ICP definition.
+
+industry_seasonality: enum [cyclical, stable, unknown]
+  | Whether this industry has predictable seasonal patterns
+  | that affect usage. Cyclical industries (retail, travel,
+  | construction) show usage dips that are NOT churn signals.
+  | The usage-decline-alert rule should adjust thresholds
+  | for cyclical accounts. See outcomes/q2-retrospective.lore
+  | for the false-positive analysis that motivated this field.
+
+fiscal_year_end: enum [q1, q2, q3, q4, unknown]
+  | When this account's fiscal year ends. Affects budget
+  | cycle timing — expansion pitches should land 2-3 months
+  | before fiscal year end when budget is being allocated.
+
+employee_count: int
+  | Most recent headcount from enrichment data.
+
+segment: enum [enterprise, mid-market, smb]
+  | Determined by ARR band. Enterprise >= $100K ARR,
+  | Mid-market $25K-$100K, SMB < $25K.
+
+arr: float
+  | Current annualized recurring revenue from all active
+  | subscriptions. Updated on each billing cycle.
+
+stage: enum [prospect, onboarding, active, at-risk, churned, former]
+  | Current lifecycle stage. See Lifecycle section.
+
+health_score: float [0.0 .. 100.0]
+  | Composite score reflecting engagement, usage, support
+  | sentiment, and commercial signals.
+  | @computed: rules/scoring.lore#account-health-score
+
+nrr_trailing_12m: float
+  | Net revenue retention for this account over trailing 12 months.
+  | Values above 1.0 indicate expansion; below 1.0 indicate contraction.
+
+csm_owner: -> Contact
+  | The CSM responsible for this account. References our internal
+  | team member (modeled as Contact with is_internal = true).
+
+ae_owner: -> Contact
+  | The Account Executive who owns the commercial relationship.
+
+icp_fit_score: float [0.0 .. 1.0]
+  | How closely this account matches our Ideal Customer Profile.
+  | Based on industry, size, tech stack, and use case alignment.
+
+## Identity
+
+An account is uniquely identified by its primary web domain.
+If two business entities share a domain, they are treated as
+one account. Parent/subsidiary relationships are modeled via
+the SUBSIDIARY_OF relationship, not as separate domain entries.
+
+## Lifecycle
+
+Accounts progress through stages based on commercial and
+engagement milestones:
+
+- **Prospect**: No signed contract. May have open opportunities.
+- **Onboarding**: First contract signed, implementation in progress.
+  Transition to Active requires: (1) product deployed in production,
+  (2) at least 5 active users, (3) first value milestone confirmed.
+- **Active**: Live customer with healthy engagement.
+- **At-risk**: Health score dropped below 40 OR NRR < 0.85 OR
+  champion departed. Triggers CSM intervention playbook.
+- **Churned**: All subscriptions cancelled or expired. Grace period
+  of 30 days before moving to Former.
+- **Former**: Previously churned, now a win-back target.
+
+## Notes
+
+Account data is enriched weekly from Clearbit/ZoomInfo.
+Revenue data syncs daily from the billing system (Stripe).
+Stage transitions are automated by rules/scoring.lore but
+can be manually overridden by CSM with a logged reason.
+
+**Expected adoption curves by segment:**
+- SMB: should reach adoption_score > 0.5 within 30 days.
+  If not, the product is likely too complex for their team
+  size. Recommend training or a simplified onboarding flow.
+- Mid-market: 60-day window to reach 0.5 adoption. These
+  accounts benefit most from implementation services.
+- Enterprise: 90-day window is normal. Complex onboarding
+  with multiple departments, IT review, SSO setup. Do not
+  trigger adoption concern signals before 90 days.
+
+**Budget cycle intelligence:**
+- Expansion pitches land best 2-3 months before fiscal year
+  end (when budget is being planned) or in Q1 of their fiscal
+  year (when new budget is available).
+- Avoid expansion conversations in the last month of their
+  fiscal year — budget is already committed.
+- If fiscal_year_end is unknown, assume Q4 (calendar year)
+  unless the account is in government (Q3) or education (Q2).
+
+**Cohort context:**
+- Always compare an account's metrics to its cohort (same
+  segment, similar onboarding date). An enterprise account
+  with 0.4 adoption at 60 days is on track. An SMB account
+  with 0.4 adoption at 60 days is falling behind.
+- Peer benchmarks: the agent should know what "good" looks
+  like for this account's segment and industry.

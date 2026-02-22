@@ -1,0 +1,42 @@
+---
+view: Customer Success Manager
+description: >
+  Scoped perspective for CSMs focused on account health,
+  churn prevention, adoption, and renewal management.
+audience: Customer Success Managers, CS Leadership
+---
+
+## Entities
+- Account (all attributes)
+- Contact (all attributes)
+- Subscription (all attributes)
+- Usage (all attributes)
+- Signal (all attributes)
+- Interaction (all attributes)
+
+## Relationships
+- All commercial relationships
+- All engagement relationships
+- All traversals
+
+## Rules
+- account-health-score
+- champion-departure-alert
+- usage-decline-alert
+- competitor-threat
+- renewal-risk-scoring
+- All scoring rules
+
+## Key Questions
+- Which accounts need immediate attention?
+- What's driving this account's health score change?
+- Who is the champion and how strong is their advocacy?
+- What does the engagement timeline look like?
+- Is this account at risk for renewal?
+- What happened that triggered this churn signal?
+- Which accounts have declining usage trends?
+
+## Not In Scope
+Deal negotiation details, discount approvals, and
+competitive pricing intelligence. CSMs flag expansion
+opportunities but hand off deal execution to AEs.

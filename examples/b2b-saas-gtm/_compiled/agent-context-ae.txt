@@ -1,0 +1,974 @@
+<domain_ontology>
+<overview>
+Domain: b2b-saas-gtm
+Description: Domain ontology for a B2B SaaS company's go-to-market operations. Models accounts, contacts, subscriptions, product usage, and engagement signals to power an AI agent that identifies revenue expansion opportunities, predicts churn risk, and recommends GTM plays.
+
+Scoped to view: Account Executive
+Audience: Account Executives, Sales Leadership
+View purpose: Scoped perspective for Account Executives focused on expansion pipeline, deal progression, and revenue growth.
+
+</overview>
+
+<entities>
+<entity name="Account">
+  A company that is a customer, prospect, or former customer. Accounts are the primary commercial unit — all revenue, contracts, and engagement roll up to the account level.
+
+
+  Attributes:
+    - name: string [required, unique]
+      Legal entity name or commonly used company name.
+    - domain: string [unique]
+      Primary web domain (e.g., acme.com). Used for identity resolution and enrichment.
+    - industry: string
+      Industry vertical per our ICP definition.
+    - industry_seasonality: enum [cyclical, stable, unknown]
+      Whether this industry has predictable seasonal patterns that affect usage. Cyclical industries (retail, travel, construction) show usage dips that are NOT churn signals. The usage-decline-alert rule should adjust thresholds for cyclical accounts. See outcomes/q2-retrospective.lore for the false-positive analysis that motivated this field.
+    - fiscal_year_end: enum [q1, q2, q3, q4, unknown]
+      When this account's fiscal year ends. Affects budget cycle timing — expansion pitches should land 2-3 months before fiscal year end when budget is being allocated.
+    - employee_count: int
+      Most recent headcount from enrichment data.
+    - segment: enum [enterprise, mid-market, smb]
+      Determined by ARR band. Enterprise >= $100K ARR, Mid-market $25K-$100K, SMB < $25K.
+    - arr: float
+      Current annualized recurring revenue from all active subscriptions. Updated on each billing cycle.
+    - stage: enum [prospect, onboarding, active, at-risk, churned, former]
+      Current lifecycle stage. See Lifecycle section.
+    - health_score: float [0.0 .. 100.0]
+      Composite score reflecting engagement, usage, support sentiment, and commercial signals.
+    - nrr_trailing_12m: float
+      Net revenue retention for this account over trailing 12 months. Values above 1.0 indicate expansion; below 1.0 indicate contraction.
+    - csm_owner: reference to Contact
+      The CSM responsible for this account. References our internal team member (modeled as Contact with is_internal = true).
+    - ae_owner: reference to Contact
+      The Account Executive who owns the commercial relationship.
+    - icp_fit_score: float [0.0 .. 1.0]
+      How closely this account matches our Ideal Customer Profile. Based on industry, size, tech stack, and use case alignment.
+
+  Identity: An account is uniquely identified by its primary web domain.
+If two business entities share a domain, they are treated as
+one account. Parent/subsidiary relationships are modeled via
+the SUBSIDIARY_OF relationship, not as separate domain entries.
+
+  Lifecycle: Accounts progress through stages based on commercial and
+engagement milestones:
+
+- **Prospect**: No signed contract. May have open opportunities.
+- **Onboarding**: First contract signed, implementation in progress.
+  Transition to Active requires: (1) product deployed in production,
+  (2) at least 5 active users, (3) first value milestone confirmed.
+- **Active**: Live customer with healthy engagement.
+- **At-risk**: Health score dropped below 40 OR NRR < 0.85 OR
+  champion departed. Triggers CSM intervention playbook.
+- **Churned**: All subscriptions cancelled or expired. Grace period
+  of 30 days before moving to Former.
+- **Former**: Previously churned, now a win-back target.
+
+  Notes: Account data is enriched weekly from Clearbit/ZoomInfo.
+Revenue data syncs daily from the billing system (Stripe).
+Stage transitions are automated by rules/scoring.lore but
+can be manually overridden by CSM with a logged reason.
+
+**Expected adoption curves by segment:**
+- SMB: should reach adoption_score > 0.5 within 30 days.
+  If not, the product is likely too complex for their team
+  size. Recommend training or a simplified onboarding flow.
+- Mid-market: 60-day window to reach 0.5 adoption. These
+  accounts benefit most from implementation services.
+- Enterprise: 90-day window is normal. Complex onboarding
+  with multiple departments, IT review, SSO setup. Do not
+  trigger adoption concern signals before 90 days.
+
+**Budget cycle intelligence:**
+- Expansion pitches land best 2-3 months before fiscal year
+  end (when budget is being planned) or in Q1 of their fiscal
+  year (when new budget is available).
+- Avoid expansion conversations in the last month of their
+  fiscal year — budget is already committed.
+- If fiscal_year_end is unknown, assume Q4 (calendar year)
+  unless the account is in government (Q3) or education (Q2).
+
+**Cohort context:**
+- Always compare an account's metrics to its cohort (same
+  segment, similar onboarding date). An enterprise account
+  with 0.4 adoption at 60 days is on track. An SMB account
+  with 0.4 adoption at 60 days is falling behind.
+- Peer benchmarks: the agent should know what "good" looks
+  like for this account's segment and industry.
+
+</entity>
+
+<entity name="Contact">
+  A person associated with an account. Can be an external stakeholder (customer) or internal team member. Contacts are the human nodes in the relationship graph — deals, engagement, and influence flow through people.
+
+
+  Attributes:
+    - name: string [required]
+      Full name as it appears in CRM.
+    - email: string [required, unique]
+      Primary email address. Used for identity resolution. @pii
+    - title: string
+      Current job title.
+    - role: enum [champion, economic-buyer, technical-buyer, end-user, executive-sponsor, blocker, unknown]
+      Functional role in the buying/retention process. Champion: internal advocate who drives adoption. Economic buyer: controls budget and signs contracts. Blocker: actively resists expansion or renewal.
+    - department: string
+      Organizational department (Engineering, Marketing, etc.)
+    - seniority: enum [ic, manager, director, vp, c-level]
+      Level in org hierarchy. Affects influence weight.
+    - is_internal: boolean
+      True if this contact is our employee (CSM, AE, SE). Internal contacts are modeled as Contacts so they can participate in relationships like OWNS and ENGAGED_WITH.
+    - last_engaged: datetime
+      Timestamp of most recent interaction (email, meeting, login).
+    - engagement_score: float [0.0 .. 100.0]
+      Composite score based on recency, frequency, and depth of interactions.
+    - champion_strength: float [0.0 .. 1.0]
+      For contacts with role = champion, how strong is their advocacy? Based on internal mentions, feature requests, reference willingness, executive access.
+
+  Identity: A contact is uniquely identified by email address.
+If a person has multiple email addresses, the primary
+(work) email is canonical. Personal emails are stored
+as aliases but do not create separate contact records.
+
+  Notes: Contact enrichment runs via Clearbit on creation and
+monthly thereafter. Title and seniority changes are
+tracked — a champion who gets promoted is a strong
+expansion signal; a champion who leaves is a churn risk.
+
+</entity>
+
+<entity name="Opportunity">
+  A potential revenue event — new business, expansion, or renewal. Opportunities track the commercial pipeline and are the unit of GTM forecasting.
+
+
+  Attributes:
+    - name: string [required]
+      Descriptive name (e.g., "Acme Corp - Enterprise Upgrade Q2").
+    - type: enum [new-business, expansion, renewal, win-back]
+      The commercial motion this opportunity represents.
+    - stage: enum [discovery, qualification, evaluation, negotiation, closed-won, closed-lost]
+      Current pipeline stage.
+    - amount: float
+      Projected ARR value if closed-won.
+    - close_date: date
+      Expected close date.
+    - probability: float [0.0 .. 1.0]
+      Win probability based on stage and engagement signals.
+    - source: enum [csm-identified, agent-recommended, ae-created, product-led, inbound]
+      How this opportunity was generated. Agent-recommended means the AI expansion agent identified and proposed it.
+    - products: reference to Product
+      Which products are included in this opportunity.
+    - primary_contact: reference to Contact
+      Main point of contact for this deal.
+    - champion: reference to Contact [optional]
+      Internal champion advocating for this deal.
+    - blockers: list<string>
+      Known obstacles to closing (budget freeze, competing priority, technical concern, etc.)
+
+  Notes: Expansion opportunities are the primary output of the
+revenue expansion agent. When the agent identifies an
+expansion signal, it creates an opportunity recommendation
+with pre-populated fields based on the signal analysis.
+
+An opportunity without an identified champion has a
+historically 3x lower close rate and should be flagged.
+
+</entity>
+
+<entity name="Product">
+  Status: stable
+  Provenance: source=domain-expert, confidence=0.95, author=product-team, created=2025-01-15
+  A product or plan that we sell. Products are the units of our catalog — accounts subscribe to products, and expansion happens when accounts add new products or upgrade existing ones. See glossary/products.lore for canonical definitions and taxonomies/product-catalog.lore for the full hierarchy.
+
+
+  Attributes:
+    - name: string [required, unique]
+      Product name as it appears in pricing page and contracts.
+    - sku: string [required, unique]
+      Internal product identifier.
+    - tier: enum [starter, professional, enterprise]
+      Pricing tier. Determines feature set and limits. See taxonomies/product-catalog.lore for full tier details.
+    - base_price_monthly: float
+      List price per seat per month before discounts. Enterprise is annual-only: multiply by 12 × seat minimum.
+    - pricing_model: enum [per-seat, flat-fee, one-time]
+      How this product is billed. Core tiers are per-seat. Data Export is flat-fee. Services are one-time.
+    - minimum_seats: int [optional]
+      Minimum seat count for this product. Enterprise = 50. Below this, the account should be on a lower tier.
+    - category: enum [core-platform, add-on, professional-services]
+      Core platform is the main product. Add-ons extend it. Professional services are implementation/consulting.
+    - available_with: list<string> [optional]
+      Which tiers this product can be attached to. E.g., Analytics add-on: ["professional", "enterprise"]. Empty means available to all tiers.
+    - features: list<string>
+      Key feature slugs included in this product. Maps to Feature.slug for adoption tracking and whitespace analysis.
+    - upgrade_path: reference to Product [optional]
+      The natural next product for accounts on this plan. Starter -> Professional -> Enterprise.
+    - typical_sales_cycle_days: int [optional]
+      Average days from opportunity creation to close. Starter: 1 (self-serve), Professional: 14, Enterprise: 45.
+    - attach_rate: float [0.0 .. 1.0] [optional]
+      Current penetration for add-on products within their eligible base. Updated quarterly by RevOps.
+
+  Identity: Products are uniquely identified by SKU. Product names can
+change (marketing rebranding) but SKUs are permanent.
+
+  Notes: Expansion revenue can come from three motions:
+1. **Seat expansion** (more users on same plan) — frictionless,
+   often doesn't need AE involvement. Triggered by seat
+   utilization > 85%.
+2. **Tier upgrade** (Starter -> Professional -> Enterprise) —
+   highest ACV impact but requires champion + business case.
+   Triggered by feature ceiling, security requirements, or
+   user count exceeding tier limits.
+3. **Add-on attach** (Analytics or Data Export added) —
+   medium ACV, targeted pitch. Triggered by usage patterns
+   that indicate the account is doing manually what the
+   add-on automates.
+
+The agent should understand which motion fits each account
+and recommend the right play. A Professional account with
+50+ users and security requests is an Enterprise upgrade
+candidate. A Professional account that runs 30 reports
+a month is an Analytics attach candidate. Both are
+"expansion" but the play is completely different.
+
+Professional services are not recurring revenue but they
+are a leading indicator of retention and expansion. The
+agent should recommend services alongside product sales —
+an Enterprise upgrade without implementation services
+leads to 40% lower adoption at 90 days.
+
+</entity>
+
+<entity name="Signal">
+  A detected event or pattern that indicates a change in account trajectory — either toward expansion or toward churn. Signals are the AI agent's primary input for generating recommendations.
+
+
+  Attributes:
+    - type: reference to SignalType
+      Classification of the signal per taxonomies/signal-types.lore
+    - strength: enum [strong, moderate, weak]
+      Confidence level based on signal clarity and historical predictive value.
+    - direction: enum [expansion, contraction, neutral]
+      Whether this signal suggests growth or risk.
+    - detected_at: datetime [required]
+      When the signal was first detected.
+    - source_data: text
+      Raw evidence that generated this signal. Could be a usage metric change, an email excerpt, a support ticket, or a product event.
+    - status: enum [new, acknowledged, actioned, dismissed]
+      Workflow status. New signals need review; actioned means a play has been triggered.
+    - recommended_play: string [optional]
+      The GTM play the agent recommends based on this signal. References a playbook entry.
+
+  Notes: Signals are ephemeral — they represent a point-in-time
+observation. Multiple related signals may be clustered
+into a "signal group" that tells a coherent story. For
+example: usage spike + new department onboarded + executive
+meeting requested = strong expansion signal cluster.
+
+Signal detection runs daily. Historical signals older than
+90 days that were never actioned are auto-archived.
+
+</entity>
+
+</entities>
+
+<relationships>
+  Account -[HAS_SUBSCRIPTION]-> Subscription (one-to-many)
+    An account can have multiple subscriptions (multi-product). All subscriptions roll up to the account's total ARR.
+  Account -[HAS_CONTACT]-> Contact (one-to-many)
+    Contacts belong to accounts. A contact can only belong to one account (if they move companies, a new contact record is created and linked via PREVIOUSLY_AT).
+  Subscription -[SUBSCRIBES_TO]-> Product (many-to-one)
+    Each subscription is for one product/plan. An account with multiple products has multiple subscriptions.
+  Account -[HAS_OPPORTUNITY]-> Opportunity (one-to-many)
+    Opportunities are attached to accounts. An account can have multiple open opportunities simultaneously.
+  Contact -[OWNS]-> Account (one-to-many)
+    Internal contacts (CSMs, AEs) own accounts. One person can own many accounts; an account has one CSM and one AE.
+    Properties: role: enum [csm, ae, se, executive-sponsor], since: date
+  Account -[SUBSIDIARY_OF]-> Account (many-to-one)
+    Parent/subsidiary relationship. Revenue may be reported at parent level for enterprise rollups.
+  Contact -[PARTICIPATED_IN]-> Interaction (many-to-many)
+    Contacts participate in interactions. Both internal (our team) and external (customer) contacts are linked.
+    Properties: role: enum [organizer, attendee, sender, recipient]
+  Account -[HAS_USAGE]-> Usage (one-to-many)
+    Usage records are per account per period. An account accumulates usage records over time forming a time series.
+  Account -[TRIGGERED]-> Signal (one-to-many)
+    Signals are detected at the account level. An account can have many active signals simultaneously.
+  Signal -[GENERATED_FROM]-> Interaction (many-to-one [optional])
+    Some signals originate from specific interactions (e.g., a negative sentiment support ticket generates a churn signal). Links signal to its evidence.
+  Signal -[GENERATED_FROM_USAGE]-> Usage (many-to-one [optional])
+    Some signals originate from usage patterns (e.g., usage spike generates an expansion signal).
+  Signal -[RESULTED_IN]-> Opportunity (many-to-one [optional])
+    When a signal is actioned and an opportunity is created, this links the signal to the outcome. Used for measuring signal-to-pipeline conversion.
+  Product -[INCLUDES_FEATURE]-> Feature (many-to-many)
+    Products include features. A feature can appear in multiple products (e.g., basic-reporting is in all tiers). The agent uses this to map what an account has access to versus what they're actually using.
+  Account -[HAS_ADOPTED]-> Feature (many-to-many)
+    Tracks which features an account is actively using. "Adopted" means the feature was used by 2+ users in the last 30 days. The gap between INCLUDES_FEATURE (what they have) and HAS_ADOPTED (what they use) is the adoption gap. When any user at this account first used this feature. Users who used this feature in the last 30 days. Trial: used 1-2 times. Light: weekly. Moderate: daily by some users. Heavy: daily by most users.
+    Properties: first_used: date, monthly_active_users: int, adoption_depth: enum [trial, light, moderate, heavy]
+  Competitor -[COMPETES_WITH]-> Product (many-to-many)
+    Which of our products a competitor directly challenges. CompeteFlow competes with Professional. DataStack competes with Enterprise. "Spreadsheets" competes with Starter. What specifically overlaps (e.g., "workflow automation", "enterprise security", "basic project management").
+    Properties: overlap_area: string
+  Opportunity -[LOST_TO]-> Competitor (many-to-one [optional])
+    When a deal is closed-lost to a specific competitor. Critical for tracking competitive win/loss rates and understanding where we're weak. Primary reason for the loss (price, feature gap, etc.)
+    Properties: loss_reason: string
+  Signal -[RECOMMENDS_PLAY]-> Play (many-to-one [optional])
+    Links a detected signal to the recommended play. This replaces the free-text recommended_play field with a structured reference to the Play entity.
+  Feature -[REQUIRES_FEATURE]-> Feature (many-to-one [optional])
+    Feature prerequisite chain. Cohort analysis requires advanced analytics. Conditional logic requires workflow automation. The agent uses this to understand adoption sequence — don't recommend an advanced feature if the prerequisite hasn't been adopted yet.
+</relationships>
+
+<traversals>
+These are valid multi-hop reasoning paths in this domain:
+
+  revenue-by-product:
+    Path: Account -[HAS_SUBSCRIPTION]-> Subscription -[SUBSCRIBES_TO]-> Product
+    Use: Answers: "What products does this account use and what's the revenue for each?"
+
+  account-portfolio:
+    Path: Contact -[OWNS]-> Account -[HAS_SUBSCRIPTION]-> Subscription
+    Use: Answers: "What's the total book of business for this CSM/AE?" Used for workload balancing and quota tracking.
+
+  expansion-pipeline:
+    Path: Account -[HAS_OPPORTUNITY]-> Opportunity -[type = expansion]
+    Use: Answers: "What expansion deals are in flight for this account or across the portfolio?"
+
+  parent-rollup:
+    Path: Account -[SUBSIDIARY_OF]-> Account (recursive)
+    Use: Answers: "What's the total ARR across the entire corporate hierarchy?" Important for enterprise pricing and executive engagement strategy.
+
+  signal-to-evidence:
+    Path: Signal -[GENERATED_FROM]-> Interaction -[PARTICIPATED_IN]- Contact
+    Use: Answers: "What happened that triggered this signal, and who was involved?" Essential for CSM context before taking action on a signal.
+
+  account-engagement-timeline:
+    Path: Account -[HAS_CONTACT]-> Contact -[PARTICIPATED_IN]-> Interaction
+    Use: Answers: "What's the full engagement history for this account?" Ordered by timestamp, gives a narrative view of the relationship.
+
+  signal-to-revenue:
+    Path: Signal -[RESULTED_IN]-> Opportunity -[stage = closed-won]
+    Use: Answers: "How much pipeline and revenue have our signals generated?" Key metric for proving AI agent ROI.
+
+  feature-adoption-gap:
+    Path: Account -[HAS_SUBSCRIPTION]-> Subscription -[SUBSCRIBES_TO]-> Product -[INCLUDES_FEATURE]-> Feature
+    Use: Answers: "What features does this account have access to?" Compare against Account -[HAS_ADOPTED]-> Feature to find the adoption gap — features available but not used. Large adoption gaps in "aha moment" features are intervention opportunities (training, CSM check-in).
+
+  competitive-exposure:
+    Path: Account -[HAS_SUBSCRIPTION]-> Subscription -[SUBSCRIBES_TO]-> Product -[COMPETES_WITH]- Competitor
+    Use: Answers: "Which competitors are relevant for this account based on what products they use?" When a competitor-threat signal fires, this traversal identifies which competitor and pulls the counter-play.
+
+  signal-to-play:
+    Path: Signal -[RECOMMENDS_PLAY]-> Play
+    Use: Answers: "What should the CSM/AE do in response to this signal?" Direct link from detection to action.
+
+  win-loss-by-competitor:
+    Path: Opportunity -[LOST_TO]-> Competitor
+    Use: Answers: "What's our win/loss rate against each competitor?" Aggregated to update Competitor.win_rate_against quarterly.
+
+  feature-upgrade-path:
+    Path: Feature -[REQUIRES_FEATURE]-> Feature
+    Use: Answers: "What's the natural adoption sequence for this account?" Used by the agent to recommend the NEXT feature to adopt, not skip ahead.
+
+</traversals>
+
+<rules>
+<rule name="champion-departure-alert">
+  Applies to: Account
+  Severity: critical
+  Trigger: Contact with role=champion becomes inactive or leaves
+  Condition: Contact WHERE account = this
+AND role = "champion"
+AND (last_engaged < now() - 60d OR title changed)
+  Action: Create Signal with type = "Champion Departure"
+Set signal.strength = "strong"
+Set signal.direction = "contraction"
+Set account.stage = "at-risk" IF health_score < 60
+Notify csm_owner immediately
+  Context: Champion departure is historically our #1 churn predictor.
+  When detected, the CSM should:
+  1. Confirm whether the champion has left or changed roles
+  2. If left: identify and cultivate a new champion within 14 days
+  3. If changed roles: assess whether new role still touches product
+  4. Map the remaining stakeholder landscape — is there anyone
+     else who can advocate for renewal?
+
+  If no replacement champion is identified within 30 days,
+  escalate to CSM manager for executive intervention.
+</rule>
+
+<rule name="usage-decline-alert">
+  Applies to: Account
+  Severity: warning
+  Trigger: Usage trend shifts to declining
+  Condition: usage.usage_trend = "declining"
+AND usage.active_users < 0.7 * avg(usage.active_users, last 3 months)
+  Action: Create Signal with type = "Usage Decline"
+Set signal.strength based on decline severity:
+- >40% decline: "strong"
+- 20-40% decline: "moderate"
+Recommended play: "Value realization check-in — don't
+lead with 'we noticed your usage dropped.' Instead ask
+about their current priorities and whether the product
+is aligned with what they need right now."
+</rule>
+
+<rule name="competitor-threat">
+  Applies to: Account
+  Severity: critical
+  Trigger: Competitor mentioned in interaction
+  Condition: Interaction WHERE account = this
+AND topics includes any of ["competitor", known_competitor_names]
+AND sentiment IN ["negative", "neutral"]
+AND timestamp > now() - 30d
+  Action: Create Signal with type = "Competitor Mention"
+Set signal.strength = "strong"
+Set signal.direction = "contraction"
+Notify csm_owner AND ae_owner immediately
+  Context: Competitor mentions combined with negative sentiment are
+  an acute threat. The response must be fast and strategic —
+  not defensive. The play is to understand what gap the
+  competitor appears to fill and address it directly.
+</rule>
+
+<rule name="renewal-risk-scoring">
+  Applies to: Subscription
+  Severity: warning
+  Trigger: Subscription within 90 days of renewal
+  Condition: subscription.renewal_date < now() + 90d
+AND subscription.status = "active"
+Evaluate renewal risk based on composite factors:
+- Seat utilization < 0.6 → high contraction risk
+- Health score < 40 → high churn risk
+- No champion identified → elevated risk
+- No executive engagement in 90+ days → elevated risk
+- NRR trailing 12m < 0.9 → prior contraction pattern
+  Action: Calculate composite renewal risk score
+If high risk: escalate to csm_owner + manager
+If medium risk: add to CSM priority queue
+Recommended play depends on primary risk factor
+</rule>
+
+<rule name="multi-signal-expansion">
+  Applies to: Account
+  Severity: info
+  Trigger: Multiple expansion signals detected within 30 days
+  Condition: count(Signal WHERE account = this
+AND direction = "expansion"
+AND strength IN ["strong", "moderate"]
+AND detected_at > now() - 30d) >= 2
+  Action: Create Opportunity with type = "expansion"
+Set opportunity.source = "agent-recommended"
+Calculate recommended products via whitespace-analysis
+Notify ae_owner with signal summary
+  Context: When multiple expansion signals cluster within a short
+  window, it indicates a genuine shift in account trajectory,
+  not just noise. The agent should synthesize the signals
+  into a narrative: "Acme has added 15 new users from the
+  marketing team this month, hit their API rate limit twice,
+  and their VP of Engineering attended our webinar. This
+  suggests cross-departmental adoption momentum."
+</rule>
+
+<rule name="whitespace-analysis">
+  Applies to: Account
+  Severity: info
+  Condition: account.stage = "active"
+AND account.health_score > 60
+For each product in our catalog that the account does NOT
+currently subscribe to, evaluate fit based on:
+1. Are they using features that are precursors to this product?
+(e.g., using basic reporting heavily -> analytics add-on)
+2. Does their industry/segment typically adopt this product?
+3. Have similar accounts expanded into this product?
+4. Is there usage evidence of the need? (e.g., exporting
+data to do externally what our add-on does natively)
+  Action: Attach whitespace analysis to account record
+Rank products by fit score
+If top product fit > 0.7, create expansion signal
+</rule>
+
+<rule name="seat-expansion-trigger">
+  Applies to: Subscription
+  Severity: info
+  Trigger: Seat utilization exceeds threshold
+  Condition: subscription.seat_utilization > 0.85
+AND subscription.status = "active"
+  Action: Create Signal with type = "Feature Ceiling Hit"
+Set signal.strength = "strong"
+Set signal.direction = "expansion"
+Recommended play: "Proactive seat expansion offer —
+reach out before they hit the limit. Offer volume
+discount for committing to higher seat count."
+</rule>
+
+<rule name="tier-upgrade-readiness">
+  Applies to: Account
+  Severity: info
+  Trigger: Account shows pattern of needing next-tier features
+  Condition: account.stage = "active"
+AND subscription.plan.tier IN ["starter", "professional"]
+AND usage.adoption_score > 0.8
+AND usage.usage_trend = "growing"
+AND account.health_score > 70
+The account is getting maximum value from their current tier
+and showing growth signals. They are likely hitting limitations
+that the next tier would resolve.
+  Action: Create Signal with type = "Feature Ceiling Hit"
+Set signal.direction = "expansion"
+Recommended play: "Tier upgrade conversation — frame
+around unlocking value, not increasing spend. Lead with
+the 2-3 features they'd gain that map to their usage
+patterns."
+</rule>
+
+<rule name="account-health-score">
+  Applies to: Account
+  Severity: info
+  Computes: Account.health_score
+  Context: The health score is a weighted composite of four dimensions:
+
+  - **Product adoption** (30%): Based on usage.adoption_score
+    averaged over last 3 months. Higher adoption = getting
+    more value = healthier.
+
+  - **Engagement quality** (25%): Based on interaction recency,
+    frequency, and sentiment. Weighted toward recent interactions.
+    Executive engagement counts 2x.
+
+  - **Support health** (20%): Inverse of open ticket count and
+    average resolution time. Accounts with many open negative
+    tickets score low.
+
+  - **Commercial signals** (25%): Seat utilization, NRR trend,
+    on-time payments. An expanding account scores high; a
+    contracting one scores low.
+
+  Scores are recalculated daily. A drop of more than 15 points
+  in a single week triggers a CSM alert regardless of absolute score.
+</rule>
+
+<rule name="contact-engagement-score">
+  Applies to: Contact
+  Severity: info
+  Computes: Contact.engagement_score
+  Context: Based on the contact's interaction history:
+  - Recency: When was their last interaction? (exponential decay)
+  - Frequency: How often do they engage per month?
+  - Depth: Are they just attending meetings or actively driving
+    discussions (organizer vs attendee, sender vs recipient)?
+  - Trend: Is engagement increasing or decreasing?
+
+  A contact with high engagement_score who suddenly drops is
+  a churn signal. A contact with increasing engagement who
+  has seniority >= director is an expansion signal.
+</rule>
+
+<rule name="champion-strength">
+  Applies to: Contact
+  Severity: info
+  Computes: Contact.champion_strength
+  Context: Only computed for contacts with role = "champion".
+  Based on:
+  - Internal advocacy actions (feature requests, case study
+    participation, reference calls)
+  - Executive access (can they get us meetings with VPs/C-level?)
+  - Adoption driving (did usage increase in their department?)
+  - Public advocacy (social mentions, conference talks, reviews)
+
+  A champion_strength > 0.8 is a "power champion" — these
+  accounts almost never churn. Below 0.3 means the champion
+  designation should be re-evaluated.
+</rule>
+
+<rule name="adoption-score">
+  Applies to: Usage
+  Severity: info
+  Computes: Usage.adoption_score
+  Context: Calculated as: count(features_used) / count(features_entitled)
+
+  Not all features are weighted equally. "Aha moment" features
+  (identified from historical activation analysis) count 3x:
+  - Workflow automation
+  - Custom dashboards
+  - API integration
+  - Team collaboration features
+</rule>
+
+<rule name="usage-trend">
+  Applies to: Usage
+  Severity: info
+  Computes: Usage.usage_trend
+  Context: Compare current period's active_users against the average
+  of the prior 3 periods:
+  - Growing: current > avg * 1.1 (>10% increase)
+  - Declining: current < avg * 0.8 (<20% decrease)
+  - Stable: everything else
+</rule>
+
+<rule name="seat-utilization">
+  Applies to: Subscription
+  Severity: info
+  Computes: Subscription.seat_utilization
+  Context: Simple ratio: seats_active / seats_purchased
+
+  Updated weekly. Uses 30-day active definition (at least
+  one meaningful session in the last 30 days).
+</rule>
+
+<rule name="opportunity-probability">
+  Applies to: Opportunity
+  Severity: info
+  Computes: Opportunity.probability
+  Context: Base probability by stage:
+  - Discovery: 0.10
+  - Qualification: 0.25
+  - Evaluation: 0.50
+  - Negotiation: 0.75
+  - Closed-won: 1.00
+  - Closed-lost: 0.00
+
+  Modifiers:
+  - Champion identified: +0.15
+  - Executive sponsor engaged: +0.10
+  - Competitor active in deal: -0.15
+  - Previous expansion history: +0.10
+  - Budget confirmed: +0.10
+  - Blocker identified: -0.10
+
+  Capped at [0.05 .. 0.95] to avoid false certainty.
+</rule>
+
+<rule name="active-seats">
+  Applies to: Subscription
+  Severity: info
+  Computes: Subscription.seats_active
+  Context: Count of unique users associated with this subscription
+  who had at least one meaningful session in the last 30 days.
+  A "meaningful session" is defined as: logged in AND performed
+  at least one action beyond viewing the dashboard.
+</rule>
+
+</rules>
+
+<taxonomies>
+<taxonomy name="ProductCatalog" applied_to="Product.category">
+  Platform
+    Starter [tags: entry-tier] —  $29/seat/month. Our entry point for teams under 20. Core dashboard, basic reporting, 5 integrations max. Most common entry: self-serve trial (14-day, no credit card). Conversion path: trial → monthly → annual after 3 months. Key limitation: no workflow automation, no API access. When accounts hit these walls, they're upgrade-ready.
+    Professional [tags: mid-tier] —  $79/seat/month. Mid-market workhorse. Everything in Starter plus advanced analytics, workflow automation, custom fields, API access (10K calls/day), and 25 integrations. This is where the majority of expansion revenue concentrates. Accounts that adopt workflow automation have 3x retention. Key limitation: no SSO, no audit logs, no SLA. Ceiling signals: > 50 users, security review requests, procurement team involvement.
+    Enterprise [tags: top-tier] —  $149/seat/month (annual contracts only, minimum 50 seats). Everything in Professional plus SSO/SAML, audit logging, SLA (99.95% uptime), dedicated CSM, unlimited integrations, API (100K calls/day), custom data retention policies. Average sales cycle: 45 days. Requires champion + exec sponsor. Enterprise accounts rarely churn (< 3% annual rate). Key signal for upgrade: procurement/security team engagement.
+    Add-Ons
+    Advanced Analytics [tags: analytics] —  $20/seat/month. Available on Professional and Enterprise. Predictive dashboards, cohort analysis, funnel visualization, custom SQL queries, scheduled report delivery. Accounts with this add-on have 40% lower churn — it's our single strongest stickiness feature. When you see an account exporting CSVs to do analysis in Sheets, that's the signal to pitch Analytics. Prerequisite behavior: heavy use of basic reporting for 2+ months.
+    Data Export [tags: data-platform] —  $500/month flat fee (not per-seat). Available on Professional and Enterprise. Real-time sync to Snowflake, BigQuery, or Redshift. Signals deep platform commitment — once data flows into their warehouse, switching cost is extreme. Accounts with Data Export: 95% retention rate. Prerequisite behavior: API usage > 5K calls/day OR data_volume > 10GB OR mention of "data warehouse" in support.
+    Professional Services
+    Implementation [tags: services] —  $15K-$75K one-time, scoped by complexity. Standard (< 50 users): $15K, 3 weeks. Advanced (50-200 users, integrations): $35K, 6 weeks. Enterprise (200+ users, migration, custom): $75K, 12 weeks. Accounts that buy implementation onboard 3x faster and have 25% higher adoption scores at 90 days.
+    Training [tags: services] —  $3K-$10K per session, virtual or on-site. Admin training (2 days): for the team managing the platform. End-user training (1 day): for daily users. Champion enablement (half day): specifically for advocates — teaches them how to drive adoption internally. Recurring quarterly training correlates with 20% higher NRR.
+    Migration [tags: services] —  $20K-$100K, scoped by data complexity and source system. Common sources: Salesforce, HubSpot, legacy custom systems. Migration includes data mapping, validation, parallel run, and cutover support. Migration accounts have highest first-year retention (98%) because the switching cost becomes real.
+  Inheritance rules: Products tagged @tag: entry-tier should trigger upgrade analysis
+when accounts show ceiling-hit signals (seat utilization > 85%,
+feature adoption > 80%, or explicit feature requests for
+capabilities in the next tier).
+
+Products tagged @tag: services are not recurring revenue but
+strongly correlate with retention. The agent should recommend
+services when an account shows adoption struggles (adoption_score
+< 0.5 at 60 days) or when a new enterprise deal closes.
+
+Products tagged @tag: analytics or @tag: data-platform are
+stickiness multipliers. The agent should proactively recommend
+these when usage patterns suggest the account is doing manually
+what the add-on automates.
+</taxonomy>
+
+<taxonomy name="SignalType" applied_to="Signal.type">
+  Signal
+    Expansion Signal [tags: expansion]
+      Usage Spike [tags: product-led] —  Active users or sessions increased >30% vs prior period.
+      New Department Adoption [tags: product-led] —  Users from a previously inactive department started using the product. Indicates organic spread.
+      Feature Ceiling Hit [tags: product-led] —  Account is at >90% of a plan limit (seats, API calls, storage). Natural upgrade trigger.
+      Executive Engagement [tags: relationship] —  VP+ level contact initiated engagement (meeting, email, event attendance). Signals strategic interest.
+      Expansion Request [tags: relationship] —  Contact explicitly asked about adding seats, products, or upgrading. Highest-intent signal.
+      Integration Deepening [tags: product-led] —  New API integrations deployed or data volume increased significantly. Indicates platform stickiness.
+      Positive Case Study [tags: relationship] —  Account agreed to be a reference or case study. Strong indicator of satisfaction and advocacy.
+      Hiring Signal [tags: external] —  Account is hiring roles that would use our product. Sourced from job board monitoring.
+    Contraction Signal [tags: contraction]
+      Usage Decline [tags: product-led] —  Active users or sessions decreased >20% vs prior period.
+      Champion Departure [tags: relationship] —  Contact with role=champion changed jobs or became inactive. Single strongest churn predictor.
+      Support Escalation [tags: relationship] —  Support ticket escalated to management or unresolved for >5 business days with negative sentiment.
+      Competitor Mention [tags: relationship] —  Competitor name mentioned in support ticket, email, or meeting transcript.
+      Seat Underutilization [tags: product-led] —  Seat utilization dropped below 50%. Account is paying for seats nobody uses.
+      Billing Issue [tags: commercial] —  Payment failed, invoice disputed, or billing support ticket opened.
+      Executive Disengagement [tags: relationship] —  No executive-level interaction in 90+ days for an enterprise account.
+      Budget/Reorg Signal [tags: external] —  News of layoffs, reorg, or budget cuts at the account. Sourced from news monitoring.
+    Neutral Signal [tags: neutral]
+      Renewal Approaching [tags: commercial] —  Subscription renewal within 90 days. Not inherently positive or negative but requires attention.
+      Stakeholder Change [tags: relationship] —  Key contact changed role or new contact joined. Could go either direction.
+      Product Update Relevant [tags: product-led] —  We shipped a feature the account had requested. Re-engagement opportunity.
+  Inheritance rules: Signals tagged @tag: product-led can be detected purely from
+telemetry data — no human input required. These should run
+on automated daily detection.
+
+Signals tagged @tag: relationship require NLP analysis of
+interaction content (emails, transcripts, tickets). These
+run on interaction ingestion events.
+
+Signals tagged @tag: external require third-party data
+sources (job boards, news feeds). These run weekly.
+</taxonomy>
+
+</taxonomies>
+
+<glossary>
+Canonical definitions — use these when interpreting user queries:
+
+  ARR (Annual Recurring Revenue): The annualized value of all active subscriptions for an
+account. Calculated as monthly recurring revenue × 12.
+Excludes one-time fees, professional services, and
+overages. ARR is our primary revenue metric.
+
+Do NOT confuse with ACV (Annual Contract Value), which
+includes one-time fees and is used for deal sizing.
+
+  NRR (Net Revenue Retention): Trailing 12-month revenue from existing accounts divided
+by the revenue those same accounts had 12 months ago.
+Includes expansion, contraction, and churn.
+NRR > 100% means existing accounts are growing net of churn.
+
+Formula: (Starting ARR + Expansion - Contraction - Churn) / Starting ARR
+
+Do NOT confuse with GRR (Gross Revenue Retention), which
+excludes expansion and only measures contraction + churn.
+
+  Expansion Revenue: Net new ARR from existing customers. Sources include:
+seat expansion, tier upgrades, and add-on product purchases.
+Does NOT include price increases at renewal — those are
+classified as "pricing uplift" and tracked separately.
+
+  Contraction: Decrease in ARR from an existing account that remains a
+customer. Causes include: seat reduction, tier downgrade,
+or removal of an add-on product. An account can contract
+without churning.
+
+  Churn: Complete loss of an account's revenue. All subscriptions
+cancelled or not renewed. Measured as churned ARR / total
+ARR at start of period. Churn is calculated at the account
+level, not the subscription level.
+
+Voluntary churn: customer chose to leave.
+Involuntary churn: payment failure, account closure.
+
+  Whitespace: Products or capabilities in our catalog that a customer
+does not currently subscribe to but could benefit from.
+Whitespace analysis compares the account's current
+subscriptions against the full product catalog, weighted
+by the account's usage patterns and industry benchmarks.
+
+  Champion: A contact at the customer who actively advocates for our
+product internally. Champions drive adoption, defend budget
+during cuts, and expand usage to new teams. Identified by:
+high engagement score, proactive outreach, feature request
+frequency, and willingness to do references.
+
+A champion is NOT just a power user. A power user uses the
+product a lot; a champion influences others to use it too.
+
+  Economic Buyer: The person who controls the budget and signs contracts.
+Often different from the champion. In enterprise accounts,
+the economic buyer is typically VP+ level while the champion
+may be a director or senior manager.
+
+  ICP (Ideal Customer Profile): The firmographic and behavioral profile of accounts most
+likely to become and remain successful customers. Our ICP
+is defined by: industry, employee count, tech stack,
+use case alignment, and growth trajectory. ICP fit score
+measures how closely an account matches.
+
+  Health Score: A composite metric (0-100) reflecting the overall health of
+the customer relationship. See rules/scoring.lore#account-health-score
+for the calculation methodology. Health score is a lagging
+indicator — it reflects what has already happened. Signals
+are the leading indicators of where health is heading.
+
+  Signal: A detected event or pattern that predicts a change in
+account trajectory. Signals are the primary input to the
+expansion and churn detection engines. See
+taxonomies/signal-types.lore for the full classification.
+
+  Play / Playbook: A recommended sequence of actions in response to a signal
+or account state. Plays are prescriptive — they tell the
+CSM or AE what to do, who to contact, and what messaging
+to use. Plays are NOT fully automated; they require human
+judgment and execution.
+
+  Book of Business: The set of accounts owned by a CSM or AE. Measured by
+total ARR, account count, and weighted pipeline. Used
+for workload balancing and territory planning.
+
+</glossary>
+
+<observations>
+Field notes from AI agents and domain experts:
+
+  <observation>Workflow automation is the Professional stickiness inflection (by adoption-analysis-agent, on 2025-06-25, confidence=0.85, about Feature)
+    Analyzed 500+ Professional accounts over 18 months. Accounts
+that adopt workflow-automation within the first 90 days have
+a 92% 12-month retention rate vs. 68% for those who don't.
+
+The adoption-prerequisite chain matters: accounts that go
+dashboard -> basic-reporting -> custom-fields -> workflow-automation
+(in that order) have the highest success. Accounts that jump
+straight to workflow-automation without adopting custom-fields
+first tend to build brittle workflows and churn at month 6.
+
+Recommendation: the agent should track Feature adoption sequence,
+not just adoption count. Skipped prerequisites are a risk signal.
+  </observation>
+
+  <observation>API access adoption predicts Enterprise readiness (by adoption-analysis-agent, on 2025-06-25, confidence=0.85, about Feature)
+    Accounts on Professional that adopt api-access within their
+first 6 months upgrade to Enterprise at 3x the rate of
+accounts that don't. The mechanism is clear: API adoption
+signals a technical team that's integrating deeply, which
+creates both stickiness and the need for Enterprise features
+(higher rate limits, SSO for their engineering team).
+
+When the agent sees API usage > 5K calls/day on a Professional
+account, it should create an Enterprise upgrade signal AND
+a Data Export recommendation simultaneously. These almost
+always travel together.
+  </observation>
+
+  <observation>Advanced Analytics has an adoption cliff at 2 weeks (by adoption-analysis-agent, on 2025-06-25, confidence=0.85, about Feature)
+    Of accounts that trial the Analytics add-on, 60% convert if
+they build a custom dashboard in the first 2 weeks. After
+that, conversion drops to 15%. The "aha moment" is seeing
+their own data in a custom dashboard — not the pre-built ones.
+
+Recommendation: when an Analytics trial starts, the agent
+should prompt the CSM to schedule a dashboard-building session
+within the first week. Don't wait for the customer to figure
+it out on their own.
+  </observation>
+
+  <observation>SSO requests are the most reliable Enterprise signal (by adoption-analysis-agent, on 2025-06-25, confidence=0.85, about Feature)
+    In the last year, 85% of Professional accounts that requested
+SSO/SAML documentation upgraded to Enterprise within 6 months.
+This is our single most reliable upgrade signal — more reliable
+than seat count, usage growth, or executive engagement.
+
+The reason: SSO requests come from security/IT teams, which
+means the account has crossed from "team tool" to "company
+tool." Once IT is involved, they require compliance features
+that only Enterprise provides.
+
+The agent should treat any mention of "SSO", "SAML", "single
+sign-on", or "security review" in support tickets or meetings
+as a strong, immediate Enterprise upgrade signal.
+  </observation>
+
+  <observation>Acme Corp shows expansion readiness (by expansion-agent-v2, on 2025-06-15, confidence=0.75, about Account)
+    Acme Corp (acme.com) is showing classic multi-signal expansion
+patterns over the past 30 days:
+
+- Active users increased 45%, from 120 to 174
+- Three new departments started using the product
+- VP Engineering Sarah Chen attended the enterprise webinar
+- Support tickets shifted from "how do I" to "can it also do"
+
+This pattern has historically preceded expansion in 78% of
+similar enterprise accounts. Recommend AE outreach within
+2 weeks, leading with the multi-department adoption story.
+  </observation>
+
+  <observation>Beta Corp usage decline looks seasonal (by expansion-agent-v2, on 2025-06-15, confidence=0.75, about Account)
+    Beta Corp (beta.io) showed a 30% usage decline in Q4,
+but this matches their industry's seasonal pattern. Three
+of their four peer accounts showed similar dips.
+
+This is likely NOT a churn signal. The usage-decline-alert
+rule fired here but was a false positive. Consider adding
+seasonal adjustment to the rule.
+  </observation>
+
+  <observation>Gamma Inc rapid onboarding (by expansion-agent-v2, on 2025-06-15, confidence=0.75, about Account)
+    Gamma Inc onboarded 50 users in their first week, well
+above the typical 15-20 for their segment. Their champion
+(CTO) is highly engaged and has already asked about API
+access and enterprise features.
+
+This looks like a fast-track expansion candidate. The
+seat-expansion-trigger rule should fire within 2 weeks
+at this adoption rate.
+  </observation>
+
+  <observation>Executive engagement signals are strongest predictor (by signal-audit-agent, on 2025-06-20, confidence=0.82, about Signal)
+    After analyzing 200+ expansion outcomes over the past year,
+executive engagement (webinar attendance, feature requests from
+VP+ titles) is the single strongest predictor of expansion,
+outperforming usage metrics by a significant margin.
+
+Current signal weighting in the expansion detection rules
+underweights executive engagement relative to raw usage growth.
+Recommend rebalancing.
+  </observation>
+
+  <observation>Usage decline signals need industry context (by signal-audit-agent, on 2025-06-20, confidence=0.82, about Signal)
+    The usage-decline-alert rule fires uniformly across all
+account segments, but decline patterns vary significantly
+by industry. Retail accounts show predictable seasonal dips
+in Q1 and Q4. SaaS accounts show usage decline during
+holiday periods but recover quickly.
+
+Without industry context, the false positive rate for
+usage decline signals is approximately 35% for enterprise
+accounts in cyclical industries.
+  </observation>
+
+</observations>
+
+<outcomes>
+Retrospectives comparing predictions to reality:
+
+  <outcome>Acme Corp expansion — correct (by outcome-tracker-agent, on 2025-07-01)
+    We predicted Acme Corp was expansion-ready (confidence: 0.82).
+They expanded. Upsell closed 2025-06-28 for +$45K ARR,
+upgrading from Growth to Enterprise tier.
+
+The VP Engineering engagement was the strongest signal —
+she championed the enterprise tier internally after the
+webinar. The multi-department adoption pattern confirmed
+product-market fit at the organization level.
+    Takeaway: increase weight of executive engagement signals in the expansion detection rules
+    Takeaway: multi-department adoption should be a first-class signal type in the Signal entity
+  </outcome>
+
+  <outcome>Beta Corp churn risk — false positive (by outcome-tracker-agent, on 2025-07-01)
+    We flagged Beta Corp as churn risk (confidence: 0.68).
+They renewed at the same tier. The usage decline was
+seasonal, as our observation suspected.
+
+This is the third Q4 false positive from the
+usage-decline-alert rule in enterprise accounts in
+cyclical industries.
+    Takeaway: the usage-decline-alert rule needs seasonal adjustment for cyclical industries
+    Takeaway: Account entity should track industry vertical to enable seasonal pattern detection
+  </outcome>
+
+  <outcome>Gamma Inc fast expansion — correct (by outcome-tracker-agent, on 2025-07-01)
+    We identified Gamma Inc as a fast-track expansion candidate.
+They upgraded to the next tier within 3 weeks of onboarding,
+adding 30 more seats.
+
+The rapid onboarding velocity was the key signal. CTO
+engagement and API access requests confirmed enterprise intent.
+    Takeaway: rapid onboarding velocity (3x segment average) should trigger immediate AE notification
+    Takeaway: API access requests correlate strongly with enterprise expansion intent
+  </outcome>
+
+</outcomes>
+
+<key_questions>
+This view is designed to answer these types of questions:
+  - Which accounts in my book have the highest expansion potential?
+  - What signals have fired for my accounts this week?
+  - Where is there whitespace I haven't pursued?
+  - What's the recommended play for this expansion signal?
+  - How does this account's parent company rollup look?
+  - Which deals need champion identification?
+</key_questions>
+
+</domain_ontology>

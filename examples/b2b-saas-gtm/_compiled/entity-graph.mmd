@@ -1,0 +1,131 @@
+---
+title: b2b-saas-gtm
+---
+erDiagram
+    Account {
+        string name PK
+        string domain PK
+        string industry
+        enum industry_seasonality
+        enum fiscal_year_end
+        int employee_count
+        enum segment
+        float arr
+    }
+    Competitor {
+        string name PK
+        enum type
+        enum segment_strength
+        text primary_differentiator
+        text our_advantage
+        text typical_displacement_trigger
+        float win_rate_against
+        list loss_reasons
+    }
+    Contact {
+        string name
+        string email PK
+        string title
+        enum role
+        string department
+        enum seniority
+        bool is_internal
+        datetime last_engaged
+    }
+    Feature {
+        string name PK
+        string slug PK
+        enum category
+        list available_in
+        bool is_aha_moment
+        bool is_tier_gate
+        float stickiness_score
+        string adoption_prerequisite
+    }
+    Interaction {
+        enum type
+        enum direction
+        datetime timestamp
+        list participants FK
+        enum sentiment
+        list topics
+        text summary
+        bool is_executive
+    }
+    Opportunity {
+        string name
+        enum type
+        enum stage
+        float amount
+        date close_date
+        float probability
+        enum source
+        list products FK
+    }
+    Play {
+        string name PK
+        string trigger_signal
+        enum owner_role
+        enum urgency
+        list segment_applicability
+        list prerequisites
+        text success_metric
+    }
+    Product {
+        string name PK
+        string sku PK
+        enum tier
+        float base_price_monthly
+        enum pricing_model
+        int minimum_seats
+        enum category
+        list available_with
+    }
+    Signal {
+        ref type FK
+        enum strength
+        enum direction
+        datetime detected_at
+        text source_data
+        enum status
+        string recommended_play
+    }
+    Subscription {
+        string subscription_id PK
+        ref plan FK
+        enum status
+        float arr_amount
+        date start_date
+        date renewal_date
+        int contract_term_months
+        int seats_purchased
+    }
+    Usage {
+        enum period
+        date period_start
+        int active_users
+        int total_sessions
+        list feature_adoption
+        int api_calls
+        float data_volume_gb
+        float adoption_score
+    }
+
+    Account ||--o{ Subscription : "has subscription"
+    Account ||--o{ Contact : "has contact"
+    Subscription }o--|| Product : "subscribes to"
+    Account ||--o{ Opportunity : "has opportunity"
+    Contact ||--o{ Account : "owns"
+    Account }o--|| Account : "subsidiary of"
+    Contact }o--o{ Interaction : "participated in"
+    Account ||--o{ Usage : "has usage"
+    Account ||--o{ Signal : "triggered"
+    Signal }o--|| Interaction : "generated from"
+    Signal }o--|| Usage : "generated from usage"
+    Signal }o--|| Opportunity : "resulted in"
+    Product }o--o{ Feature : "includes feature"
+    Account }o--o{ Feature : "has adopted"
+    Competitor }o--o{ Product : "competes with"
+    Opportunity }o--|| Competitor : "lost to"
+    Signal }o--|| Play : "recommends play"
+    Feature }o--|| Feature : "requires feature"

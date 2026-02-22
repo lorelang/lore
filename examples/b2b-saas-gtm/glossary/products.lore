@@ -1,0 +1,223 @@
+---
+type: glossary
+description: >
+  Canonical definitions for our product portfolio. When an AI
+  agent needs to recommend a product, pitch an upgrade, or
+  analyze whitespace, these definitions are the source of truth.
+provenance:
+  author: product-team
+  source: domain-expert
+  confidence: 0.95
+  created: 2025-01-15
+status: stable
+---
+
+## Starter
+
+Our entry-level SaaS tier at $29/seat/month. Designed for
+teams of 5-20 who need a core workflow platform without
+complexity. Includes dashboard, basic reporting, team inbox,
+and up to 5 third-party integrations.
+
+Starter accounts typically enter via self-serve trial (14 days,
+no credit card required). 23% of trials convert to paid.
+Average time to paid conversion: 14 days. Average starting
+seat count: 8.
+
+Starter is NOT a loss leader — it's profitable at 5+ seats.
+But its strategic value is as a land-and-expand entry point.
+62% of accounts that start on Starter upgrade within 18 months.
+
+Limitations that drive upgrades: no workflow automation,
+no API access, no custom fields, 5 integration cap,
+basic reporting only (no cohorts, no predictive).
+
+## Professional
+
+Mid-market tier at $79/seat/month. Everything in Starter plus
+advanced analytics, workflow automation engine, custom fields,
+full API access (10K calls/day rate limit), and 25 integrations.
+
+Professional is where the majority of expansion revenue
+concentrates. It's the right tier for teams of 20-200 who
+have outgrown basic tooling and need to automate workflows.
+
+Key adoption milestones on Professional:
+- Week 1-2: basic setup, team invited, existing workflow recreated
+- Month 1: first custom workflow automated
+- Month 2-3: API integrations connected, data flowing
+- Month 3-6: "aha moment" — workflow automation saves measurable time
+- Month 6+: embedded in daily operations, switching cost real
+
+Accounts that adopt workflow automation features have 3x
+higher retention than those using Professional as "Starter
+with more seats." The agent should track this distinction.
+
+Limitations that drive Enterprise upgrades: no SSO/SAML
+(blocker for 50+ seat orgs with security teams), no audit
+logging (compliance requirement), no SLA, no dedicated CSM.
+
+## Enterprise
+
+Premium tier at $149/seat/month with annual contracts only and
+a 50-seat minimum ($89,400/year floor). Everything in
+Professional plus SSO/SAML, audit logging, 99.95% SLA,
+dedicated CSM, unlimited integrations, 100K API calls/day,
+custom data retention policies, and priority support.
+
+Enterprise is sold, not bought. Average sales cycle: 45 days.
+Requires both a champion (typically director/senior manager)
+and an executive sponsor (VP+). Procurement team involvement
+is standard. Legal/security review of our SOC 2 and BAA is
+common.
+
+Enterprise accounts have < 3% annual churn rate and average
+NRR of 115%. They are our most valuable and most stable segment.
+However, the long sales cycle means the agent must identify
+upgrade readiness 2-3 months before the AE can close.
+
+Signals that an account is Enterprise-ready:
+- User count approaching or exceeding 50
+- Security team or IT requesting SSO documentation
+- Procurement or legal team introduced in conversations
+- Multiple departments using the product
+- Executive sponsor emerged (VP+ attending meetings)
+
+## Advanced Analytics
+
+Add-on product at $20/seat/month, available for Professional
+and Enterprise customers only. Includes predictive dashboards,
+cohort analysis, funnel visualization, custom SQL query builder,
+and scheduled report delivery (daily/weekly email digests).
+
+This is our highest-impact add-on for retention. Accounts with
+Advanced Analytics have 40% lower churn than matched accounts
+without it. The likely mechanism: Analytics users build
+custom dashboards that become part of their team's operating
+rhythm. Once your Monday morning starts with our dashboard,
+you don't switch.
+
+Signals that an account needs Analytics:
+- Heavy basic reporting usage (> 20 reports/month)
+- Exporting CSVs to analyze in Google Sheets or Excel
+- Support tickets asking "can I do cohort analysis?"
+- Feature requests mentioning "predictive" or "forecast"
+- Multiple stakeholders viewing the same basic reports
+
+Prerequisite: 2+ months of active basic reporting usage.
+Pitching Analytics to an account that hasn't adopted
+reporting yet will fail — they need to feel the limitation.
+
+## Data Export
+
+Add-on product at $500/month flat fee (not per-seat), available
+for Professional and Enterprise customers. Provides real-time
+data sync to Snowflake, BigQuery, or Amazon Redshift via a
+managed pipeline. Includes schema documentation, monitoring,
+and retry logic.
+
+Data Export is our strongest stickiness signal. Once an account
+pipes our data into their warehouse and builds downstream
+reports, dashboards, or ML models on top of it, the switching
+cost becomes prohibitive. Retention for Data Export accounts: 95%.
+
+Signals that an account needs Data Export:
+- API usage > 5,000 calls/day (they're pulling data programmatically)
+- Data volume > 10GB and growing
+- Support tickets mentioning "data warehouse," "Snowflake," "ETL"
+- Account has a data engineering team (visible in contact titles)
+- They've built external dashboards that pull our API
+
+This is a premium signal for deep platform commitment. When the
+agent detects Data Export readiness, it should also flag the
+account as a likely long-term Enterprise candidate.
+
+## Implementation Services
+
+Professional services engagement ($15K-$75K one-time) for
+structured onboarding. Not recurring revenue, but a strong
+leading indicator of retention and expansion.
+
+Three tiers:
+- Standard ($15K, 3 weeks): for < 50 user deployments with
+  standard configuration. Includes admin setup, team training,
+  and first workflow configuration.
+- Advanced ($35K, 6 weeks): for 50-200 user deployments with
+  integrations. Includes everything in Standard plus API setup,
+  3rd-party integration configuration, and data migration from
+  one source system.
+- Enterprise ($75K, 12 weeks): for 200+ user deployments with
+  complex migration. Includes everything in Advanced plus
+  multi-system migration, custom workflow design, executive
+  stakeholder alignment sessions, and parallel run validation.
+
+Accounts that purchase implementation services onboard 3x faster
+and have 25% higher 90-day adoption scores. The agent should
+recommend implementation when a new Enterprise deal closes or
+when an expanding account adds a new department.
+
+## Training
+
+Professional services engagement ($3K-$10K per session) available
+both virtually and on-site. Three formats:
+
+- Admin training (2 days, $10K): for the 2-5 people managing
+  the platform. Covers configuration, user management,
+  integration setup, and basic troubleshooting.
+- End-user training (1 day, $5K): for daily users of the platform.
+  Covers core workflows, best practices, and tips. Recommended
+  when a new department onboards.
+- Champion enablement (half day, $3K): specifically teaches
+  champions how to drive adoption internally — creating templates,
+  setting up team workflows, building the internal business case
+  for expansion.
+
+Recurring quarterly training correlates with 20% higher NRR.
+The agent should recommend training when adoption_score < 0.5
+at 60+ days, or when a new department is onboarded.
+
+## Migration
+
+Professional services engagement ($20K-$100K) for migrating
+data and workflows from a previous system. Priced by data
+complexity and source system.
+
+Common source systems: Salesforce (custom objects), HubSpot
+(workflows + contacts), Monday.com (boards + automations),
+and legacy custom-built tools (highest complexity, highest
+price).
+
+Migration includes: source system audit, data mapping document,
+field-by-field validation, parallel run period (2-4 weeks),
+cutover support, and 30-day post-migration hypercare.
+
+Migration accounts have 98% first-year retention — the highest
+of any segment. The act of migrating makes the switching cost
+tangible and real. The agent should identify migration
+opportunities when a prospect mentions their current tool
+limitations or when a competitor-threat signal fires.
+
+## ACV (Annual Contract Value)
+
+The total first-year value of a deal including subscription
+fees and one-time professional services. Different from ARR
+because it includes non-recurring revenue.
+
+Example: Enterprise (50 seats × $149 × 12 = $89,400 ARR) +
+Implementation ($35K) = $124,400 ACV.
+
+ACV is used for deal sizing and AE compensation. The agent
+uses ARR for retention metrics and ACV for deal recommendations.
+
+## Attach Rate
+
+The percentage of accounts in a segment that have a specific
+add-on product. Used to benchmark whitespace opportunity.
+
+Current attach rates:
+- Advanced Analytics: 35% of Professional, 60% of Enterprise
+- Data Export: 8% of Professional, 25% of Enterprise
+
+Accounts below their segment's attach rate are whitespace
+targets. Accounts above their segment's attach rate are
+reference candidates for that product.

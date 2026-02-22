@@ -1,0 +1,15 @@
+name: b2b-saas-gtm
+version: 0.2.0
+description: >
+  Domain ontology for a B2B SaaS company's go-to-market operations.
+  Models accounts, contacts, subscriptions, product usage, and engagement
+  signals to power an AI agent that identifies revenue expansion
+  opportunities, predicts churn risk, and recommends GTM plays.
+domain: B2B SaaS Revenue Operations
+maintainers:
+  - name: RevOps Team
+    role: Domain Owner
+
+evolution:
+  proposals: open
+  staleness: 90d

@@ -1,0 +1,42 @@
+---
+view: Account Executive
+description: >
+  Scoped perspective for Account Executives focused on
+  expansion pipeline, deal progression, and revenue growth.
+audience: Account Executives, Sales Leadership
+---
+
+## Entities
+- Account (segment, arr, stage, health_score, icp_fit_score, nrr_trailing_12m)
+- Contact (name, title, role, seniority, engagement_score, champion_strength)
+- Opportunity (all attributes)
+- Product (name, tier, base_price_monthly, upgrade_path)
+- Signal (type, strength, direction, recommended_play WHERE direction = expansion)
+
+## Relationships
+- HAS_OPPORTUNITY
+- HAS_CONTACT
+- SUBSIDIARY_OF
+- revenue-by-product traversal
+- expansion-pipeline traversal
+- parent-rollup traversal
+
+## Rules
+- multi-signal-expansion
+- whitespace-analysis
+- seat-expansion-trigger
+- tier-upgrade-readiness
+- opportunity-probability
+
+## Key Questions
+- Which accounts in my book have the highest expansion potential?
+- What signals have fired for my accounts this week?
+- Where is there whitespace I haven't pursued?
+- What's the recommended play for this expansion signal?
+- How does this account's parent company rollup look?
+- Which deals need champion identification?
+
+## Not In Scope
+Support ticket details, detailed usage telemetry, and churn
+intervention workflows. AEs see health scores and signals
+but detailed churn management is the CSM's domain.

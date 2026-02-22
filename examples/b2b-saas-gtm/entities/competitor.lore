@@ -1,0 +1,106 @@
+---
+entity: Competitor
+description: >
+  A competing product or vendor that appears in our deal
+  cycles and churn events. Competitors are not just companies —
+  they include "do nothing" (stay on spreadsheets) and
+  "build internally" (customer builds their own). Understanding
+  competitor dynamics lets the agent craft targeted responses
+  when a competitor-threat signal fires.
+provenance:
+  author: revops-team
+  source: domain-expert
+  confidence: 0.85
+  created: 2025-02-01
+status: stable
+---
+
+## Attributes
+
+name: string [required, unique]
+  | Competitor name as sales team refers to them.
+
+type: enum [direct, adjacent, diy, inertia]
+  | Direct: head-to-head feature overlap.
+  | Adjacent: different category but solves similar problem.
+  | DIY: customer builds internally with spreadsheets/code.
+  | Inertia: "do nothing" — the status quo.
+
+segment_strength: enum [enterprise, mid-market, smb, all]
+  | Where this competitor is strongest. Informs which of
+  | our accounts are most at risk.
+
+primary_differentiator: text
+  | What this competitor does that we don't, or does better.
+  | Must be honest — the agent needs accurate intel, not
+  | marketing spin.
+
+our_advantage: text
+  | What we do better than this competitor. Used to craft
+  | positioning when competitor-threat signal fires.
+
+typical_displacement_trigger: text
+  | What typically causes an account to consider switching
+  | to this competitor. Knowing the trigger helps us
+  | intervene before the evaluation starts.
+
+win_rate_against: float [0.0 .. 1.0]
+  | Historical win rate in deals where this competitor was
+  | present. Updated quarterly from closed-won/closed-lost data.
+
+loss_reasons: list<string>
+  | Top reasons we lose to this competitor. Ordered by frequency.
+
+counter_play: text
+  | The recommended response when this competitor appears
+  | in a deal. Not a script — a strategic framework for
+  | how to position.
+
+## Identity
+
+A competitor is identified by name. Aliases should be tracked
+(e.g., "SFDC" = "Salesforce") so the NLP pipeline can detect
+mentions across all naming variants.
+
+## Notes
+
+Competitor intelligence is perishable. What was true about a
+competitor 6 months ago may not be true today — they ship
+features too. The agent should treat competitor data with
+time-decayed confidence and flag entries older than 90 days
+for review.
+
+Current competitive landscape:
+
+**CompeteFlow** (direct, mid-market strength)
+- Their workflow automation is more visual (drag-and-drop).
+- We win on analytics depth, API, and enterprise security.
+- Win rate: 55%. We lose when the buyer is non-technical and
+  values ease-of-setup over power.
+- Counter: demo our workflow builder improvements, emphasize
+  analytics moat, get a technical evaluator in the room.
+
+**DataStack** (direct, enterprise strength)
+- Enterprise-first, heavy on compliance and data governance.
+- More expensive. Their analytics are stronger than ours.
+- We win on time-to-value and mid-market fit.
+- Win rate: 40%. We lose on compliance features in regulated industries.
+- Counter: emphasize faster onboarding (weeks vs months),
+  highlight total cost including their expensive implementation.
+
+**Spreadsheets / Manual process** (diy, all segments)
+- The #1 competitor across all segments. 40% of lost deals
+  are to "no decision" — they stick with what they have.
+- Typically: Excel/Sheets + email + manual process.
+- We win when someone quantifies the time cost.
+- Counter: ROI calculator, "what does this process cost you
+  in hours per week?" framing. Find the person who's tired
+  of maintaining the spreadsheet.
+
+**Internal Tools** (diy, enterprise)
+- Engineering team builds a custom internal tool.
+- We lose to this when the company has spare engineering capacity
+  and the champion is a CTO who prefers in-house.
+- We win when maintenance cost becomes real (usually 6-12 months).
+- Counter: "build vs buy" TCO analysis. Highlight ongoing
+  maintenance, opportunity cost, and feature velocity gap.

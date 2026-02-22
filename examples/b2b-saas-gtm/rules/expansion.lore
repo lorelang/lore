@@ -1,0 +1,95 @@
+---
+domain: Expansion Detection
+description: >
+  Rules that identify expansion opportunities and
+  recommend GTM plays. These rules are the core logic
+  of the revenue expansion AI agent.
+---
+
+## multi-signal-expansion
+  applies_to: Account
+  severity: info
+  trigger: Multiple expansion signals detected within 30 days
+
+  condition:
+    count(Signal WHERE account = this
+      AND direction = "expansion"
+      AND strength IN ["strong", "moderate"]
+      AND detected_at > now() - 30d) >= 2
+
+  action:
+    Create Opportunity with type = "expansion"
+    Set opportunity.source = "agent-recommended"
+    Calculate recommended products via whitespace-analysis
+    Notify ae_owner with signal summary
+
+  When multiple expansion signals cluster within a short
+  window, it indicates a genuine shift in account trajectory,
+  not just noise. The agent should synthesize the signals
+  into a narrative: "Acme has added 15 new users from the
+  marketing team this month, hit their API rate limit twice,
+  and their VP of Engineering attended our webinar. This
+  suggests cross-departmental adoption momentum."
+
+## whitespace-analysis
+  applies_to: Account
+  severity: info
+
+  condition:
+    account.stage = "active"
+    AND account.health_score > 60
+
+  For each product in our catalog that the account does NOT
+  currently subscribe to, evaluate fit based on:
+  1. Are they using features that are precursors to this product?
+     (e.g., using basic reporting heavily -> analytics add-on)
+  2. Does their industry/segment typically adopt this product?
+  3. Have similar accounts expanded into this product?
+  4. Is there usage evidence of the need? (e.g., exporting
+     data to do externally what our add-on does natively)
+
+  action:
+    Attach whitespace analysis to account record
+    Rank products by fit score
+    If top product fit > 0.7, create expansion signal
+
+## seat-expansion-trigger
+  applies_to: Subscription
+  severity: info
+  trigger: Seat utilization exceeds threshold
+
+  condition:
+    subscription.seat_utilization > 0.85
+    AND subscription.status = "active"
+
+  action:
+    Create Signal with type = "Feature Ceiling Hit"
+    Set signal.strength = "strong"
+    Set signal.direction = "expansion"
+    Recommended play: "Proactive seat expansion offer —
+    reach out before they hit the limit. Offer volume
+    discount for committing to higher seat count."
+
+## tier-upgrade-readiness
+  applies_to: Account
+  severity: info
+  trigger: Account shows pattern of needing next-tier features
+
+  condition:
+    account.stage = "active"
+    AND subscription.plan.tier IN ["starter", "professional"]
+    AND usage.adoption_score > 0.8
+    AND usage.usage_trend = "growing"
+    AND account.health_score > 70
+
+  The account is getting maximum value from their current tier
+  and showing growth signals. They are likely hitting limitations
+  that the next tier would resolve.
+
+  action:
+    Create Signal with type = "Feature Ceiling Hit"
+    Set signal.direction = "expansion"
+    Recommended play: "Tier upgrade conversation — frame
+    around unlocking value, not increasing spend. Lead with
+    the 2-3 features they'd gain that map to their usage
+    patterns."

@@ -1,0 +1,36 @@
+---
+observations: Signal Quality Review
+about: Signal
+observed_by: signal-audit-agent
+date: 2025-06-20
+confidence: 0.82
+status: proposed
+provenance:
+  author: signal-audit-agent
+  source: ai-generated
+  confidence: 0.82
+  created: 2025-06-20
+---
+
+## Executive engagement signals are strongest predictor
+
+After analyzing 200+ expansion outcomes over the past year,
+executive engagement (webinar attendance, feature requests from
+VP+ titles) is the single strongest predictor of expansion,
+outperforming usage metrics by a significant margin.
+
+Current signal weighting in the expansion detection rules
+underweights executive engagement relative to raw usage growth.
+Recommend rebalancing.
+
+## Usage decline signals need industry context
+
+The usage-decline-alert rule fires uniformly across all
+account segments, but decline patterns vary significantly
+by industry. Retail accounts show predictable seasonal dips
+in Q1 and Q4. SaaS accounts show usage decline during
+holiday periods but recover quickly.
+
+Without industry context, the false positive rate for
+usage decline signals is approximately 35% for enterprise
+accounts in cyclical industries.

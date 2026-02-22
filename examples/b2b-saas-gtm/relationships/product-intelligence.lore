@@ -1,0 +1,110 @@
+---
+domain: Product Intelligence
+description: >
+  Relationships connecting features, competitors, and plays
+  to the core commercial and engagement entities. This is
+  the knowledge layer that enables the agent to reason about
+  which product to recommend, which competitor to counter,
+  and which play to run.
+provenance:
+  author: revops-team
+  source: domain-expert
+  confidence: 0.9
+  created: 2025-02-01
+status: stable
+---
+
+## INCLUDES_FEATURE
+  from: Product -> to: Feature
+  cardinality: many-to-many
+  | Products include features. A feature can appear in
+  | multiple products (e.g., basic-reporting is in all tiers).
+  | The agent uses this to map what an account has access to
+  | versus what they're actually using.
+
+## HAS_ADOPTED
+  from: Account -> to: Feature
+  cardinality: many-to-many
+  | Tracks which features an account is actively using.
+  | "Adopted" means the feature was used by 2+ users in the
+  | last 30 days. The gap between INCLUDES_FEATURE (what they
+  | have) and HAS_ADOPTED (what they use) is the adoption gap.
+
+  properties:
+    first_used: date
+      | When any user at this account first used this feature.
+    monthly_active_users: int
+      | Users who used this feature in the last 30 days.
+    adoption_depth: enum [trial, light, moderate, heavy]
+      | Trial: used 1-2 times. Light: weekly. Moderate: daily
+      | by some users. Heavy: daily by most users.
+
+## COMPETES_WITH
+  from: Competitor -> to: Product
+  cardinality: many-to-many
+  | Which of our products a competitor directly challenges.
+  | CompeteFlow competes with Professional. DataStack competes
+  | with Enterprise. "Spreadsheets" competes with Starter.
+
+  properties:
+    overlap_area: string
+      | What specifically overlaps (e.g., "workflow automation",
+      | "enterprise security", "basic project management").
+
+## LOST_TO
+  from: Opportunity -> to: Competitor
+  cardinality: many-to-one [optional]
+  | When a deal is closed-lost to a specific competitor.
+  | Critical for tracking competitive win/loss rates and
+  | understanding where we're weak.
+
+  properties:
+    loss_reason: string
+      | Primary reason for the loss (price, feature gap, etc.)
+
+## RECOMMENDS_PLAY
+  from: Signal -> to: Play
+  cardinality: many-to-one [optional]
+  | Links a detected signal to the recommended play.
+  | This replaces the free-text recommended_play field
+  | with a structured reference to the Play entity.
+
+## REQUIRES_FEATURE
+  from: Feature -> to: Feature
+  cardinality: many-to-one [optional]
+  | Feature prerequisite chain. Cohort analysis requires
+  | advanced analytics. Conditional logic requires workflow
+  | automation. The agent uses this to understand adoption
+  | sequence — don't recommend an advanced feature if the
+  | prerequisite hasn't been adopted yet.
+
+## Traversal: feature-adoption-gap
+  path: Account -[HAS_SUBSCRIPTION]-> Subscription -[SUBSCRIBES_TO]-> Product -[INCLUDES_FEATURE]-> Feature
+  | Answers: "What features does this account have access to?"
+  | Compare against Account -[HAS_ADOPTED]-> Feature to find
+  | the adoption gap — features available but not used.
+  | Large adoption gaps in "aha moment" features are
+  | intervention opportunities (training, CSM check-in).
+
+## Traversal: competitive-exposure
+  path: Account -[HAS_SUBSCRIPTION]-> Subscription -[SUBSCRIBES_TO]-> Product -[COMPETES_WITH]- Competitor
+  | Answers: "Which competitors are relevant for this account
+  | based on what products they use?" When a competitor-threat
+  | signal fires, this traversal identifies which competitor
+  | and pulls the counter-play.
+
+## Traversal: signal-to-play
+  path: Signal -[RECOMMENDS_PLAY]-> Play
+  | Answers: "What should the CSM/AE do in response to this
+  | signal?" Direct link from detection to action.
+
+## Traversal: win-loss-by-competitor
+  path: Opportunity -[LOST_TO]-> Competitor
+  | Answers: "What's our win/loss rate against each competitor?"
+  | Aggregated to update Competitor.win_rate_against quarterly.
+
+## Traversal: feature-upgrade-path
+  path: Feature -[REQUIRES_FEATURE]-> Feature
+  | Answers: "What's the natural adoption sequence for this
+  | account?" Used by the agent to recommend the NEXT feature
+  | to adopt, not skip ahead.

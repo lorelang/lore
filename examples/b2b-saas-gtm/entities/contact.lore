@@ -1,0 +1,65 @@
+---
+entity: Contact
+description: >
+  A person associated with an account. Can be an external
+  stakeholder (customer) or internal team member. Contacts
+  are the human nodes in the relationship graph — deals,
+  engagement, and influence flow through people.
+---
+
+## Attributes
+
+name: string [required]
+  | Full name as it appears in CRM.
+
+email: string [required, unique]
+  | Primary email address. Used for identity resolution.
+  | @pii
+
+title: string
+  | Current job title.
+
+role: enum [champion, economic-buyer, technical-buyer, end-user, executive-sponsor, blocker, unknown]
+  | Functional role in the buying/retention process.
+  | Champion: internal advocate who drives adoption.
+  | Economic buyer: controls budget and signs contracts.
+  | Blocker: actively resists expansion or renewal.
+
+department: string
+  | Organizational department (Engineering, Marketing, etc.)
+
+seniority: enum [ic, manager, director, vp, c-level]
+  | Level in org hierarchy. Affects influence weight.
+
+is_internal: boolean
+  | True if this contact is our employee (CSM, AE, SE).
+  | Internal contacts are modeled as Contacts so they can
+  | participate in relationships like OWNS and ENGAGED_WITH.
+
+last_engaged: datetime
+  | Timestamp of most recent interaction (email, meeting, login).
+
+engagement_score: float [0.0 .. 100.0]
+  | Composite score based on recency, frequency, and depth
+  | of interactions.
+  | @computed: rules/scoring.lore#contact-engagement-score
+
+champion_strength: float [0.0 .. 1.0]
+  | For contacts with role = champion, how strong is their
+  | advocacy? Based on internal mentions, feature requests,
+  | reference willingness, executive access.
+  | @computed: rules/scoring.lore#champion-strength
+
+## Identity
+
+A contact is uniquely identified by email address.
+If a person has multiple email addresses, the primary
+(work) email is canonical. Personal emails are stored
+as aliases but do not create separate contact records.
+
+## Notes
+
+Contact enrichment runs via Clearbit on creation and
+monthly thereafter. Title and seniority changes are
+tracked — a champion who gets promoted is a strong
+expansion signal; a champion who leaves is a churn risk.

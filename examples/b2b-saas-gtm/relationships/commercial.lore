@@ -1,0 +1,69 @@
+---
+domain: Commercial
+description: >
+  Relationships that define the commercial structure —
+  how accounts, contacts, subscriptions, and opportunities
+  connect to form the revenue graph.
+---
+
+## HAS_SUBSCRIPTION
+  from: Account -> to: Subscription
+  cardinality: one-to-many
+  | An account can have multiple subscriptions (multi-product).
+  | All subscriptions roll up to the account's total ARR.
+
+## HAS_CONTACT
+  from: Account -> to: Contact
+  cardinality: one-to-many
+  | Contacts belong to accounts. A contact can only belong
+  | to one account (if they move companies, a new contact
+  | record is created and linked via PREVIOUSLY_AT).
+
+## SUBSCRIBES_TO
+  from: Subscription -> to: Product
+  cardinality: many-to-one
+  | Each subscription is for one product/plan. An account
+  | with multiple products has multiple subscriptions.
+
+## HAS_OPPORTUNITY
+  from: Account -> to: Opportunity
+  cardinality: one-to-many
+  | Opportunities are attached to accounts. An account can
+  | have multiple open opportunities simultaneously.
+
+## OWNS
+  from: Contact -> to: Account
+  cardinality: one-to-many
+  | Internal contacts (CSMs, AEs) own accounts. One person
+  | can own many accounts; an account has one CSM and one AE.
+
+  properties:
+    role: enum [csm, ae, se, executive-sponsor]
+    since: date
+
+## SUBSIDIARY_OF
+  from: Account -> to: Account
+  cardinality: many-to-one
+  | Parent/subsidiary relationship. Revenue may be reported
+  | at parent level for enterprise rollups.
+
+## Traversal: revenue-by-product
+  path: Account -[HAS_SUBSCRIPTION]-> Subscription -[SUBSCRIBES_TO]-> Product
+  | Answers: "What products does this account use and what's
+  | the revenue for each?"
+
+## Traversal: account-portfolio
+  path: Contact -[OWNS]-> Account -[HAS_SUBSCRIPTION]-> Subscription
+  | Answers: "What's the total book of business for this
+  | CSM/AE?" Used for workload balancing and quota tracking.
+
+## Traversal: expansion-pipeline
+  path: Account -[HAS_OPPORTUNITY]-> Opportunity -[type = expansion]
+  | Answers: "What expansion deals are in flight for this
+  | account or across the portfolio?"
+
+## Traversal: parent-rollup
+  path: Account -[SUBSIDIARY_OF]-> Account (recursive)
+  | Answers: "What's the total ARR across the entire
+  | corporate hierarchy?" Important for enterprise pricing
+  | and executive engagement strategy.

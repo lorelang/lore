@@ -1,0 +1,113 @@
+---
+entity: Feature
+description: >
+  A distinct capability within the platform that can be
+  independently tracked for adoption, gated by tier, and
+  used as a signal for expansion or stickiness. Features
+  are the atomic unit of value delivery — the bridge between
+  what we sell (Products) and what customers actually use (Usage).
+provenance:
+  author: product-team
+  source: domain-expert
+  confidence: 0.9
+  created: 2025-01-15
+status: stable
+---
+
+## Attributes
+
+name: string [required, unique]
+  | Feature name as it appears in the product UI and docs.
+
+slug: string [required, unique]
+  | Internal identifier used in telemetry events
+  | (e.g., "workflow-automation", "custom-sql-query").
+
+category: enum [core, analytics, automation, integration, admin, security]
+  | Functional category. Used for grouping adoption metrics.
+
+available_in: list<string>
+  | Which product tiers include this feature.
+  | E.g., ["professional", "enterprise"] means not in Starter.
+
+is_aha_moment: boolean
+  | Whether this feature is an "aha moment" — a capability
+  | that, once adopted, dramatically increases retention.
+  | Aha moment features count 3x in adoption_score calculation.
+
+is_tier_gate: boolean
+  | Whether this feature is a primary reason accounts upgrade
+  | to the next tier. Tier-gate features, when requested by
+  | a lower-tier account, are strong upgrade signals.
+
+stickiness_score: float [0.0 .. 1.0]
+  | How much adopting this feature increases retention.
+  | Based on historical cohort analysis. 1.0 = once adopted,
+  | account never churns. Updated quarterly by data team.
+
+adoption_prerequisite: string [optional]
+  | Feature slug that should be adopted first. Features have
+  | a natural adoption sequence — e.g., "basic-reporting"
+  | should be adopted before "cohort-analysis".
+
+## Identity
+
+Features are uniquely identified by slug. The slug matches
+the telemetry event namespace so we can directly link feature
+adoption tracking to the ontology.
+
+## Lifecycle
+
+Features go through maturity stages:
+- **Beta**: available to opt-in accounts, not in official tier.
+- **GA (General Availability)**: included in tier, fully supported.
+- **Sunset**: being replaced, existing users grandfathered.
+
+Feature lifecycle changes should be tracked as observations
+because they affect signal interpretation — a usage decline
+in a sunsetting feature is not a churn signal.
+
+## Notes
+
+The current feature inventory:
+
+**Core features** (all tiers):
+- Dashboard (`dashboard`) — the home screen, always adopted
+- Team inbox (`team-inbox`) — shared communication
+- Basic reporting (`basic-reporting`) — standard charts and tables
+- Contact management (`contact-mgmt`) — CRM-like contact records
+- Task management (`task-mgmt`) — assignment and tracking
+
+**Analytics features** (Professional+):
+- Advanced analytics (`advanced-analytics`) — @aha_moment
+- Cohort analysis (`cohort-analysis`) — requires advanced-analytics
+- Funnel visualization (`funnel-viz`) — requires advanced-analytics
+- Custom SQL queries (`custom-sql-query`) — Analytics add-on only
+- Predictive dashboards (`predictive-dashboards`) — Analytics add-on only
+- Scheduled reports (`scheduled-reports`) — Analytics add-on only
+
+**Automation features** (Professional+):
+- Workflow automation (`workflow-automation`) — @aha_moment, @tier_gate
+- Custom fields (`custom-fields`)
+- Conditional logic (`conditional-logic`) — requires workflow-automation
+- Approval chains (`approval-chains`) — requires workflow-automation
+
+**Integration features** (varies by tier):
+- Native integrations (`native-integrations`) — 5 on Starter, 25 on Pro, unlimited on Enterprise
+- API access (`api-access`) — @tier_gate, Professional+ only
+- Webhooks (`webhooks`) — Professional+
+- Data Export (`data-export`) — Data Export add-on only, @aha_moment
+
+**Security & Admin features** (Enterprise only):
+- SSO/SAML (`sso-saml`) — @tier_gate, #1 reason for Enterprise upgrade
+- Audit logging (`audit-log`) — @tier_gate, compliance requirement
+- Custom data retention (`data-retention`) — Enterprise only
+- Role-based access control (`rbac`) — basic in Pro, advanced in Enterprise
+
+The three highest-impact features for expansion:
+1. Workflow automation — once a team automates their first process,
+   they build more. This is the feature that makes Professional sticky.
+2. API access — signals that the account is integrating deeply.
+   API-active accounts have 85% retention.
+3. SSO/SAML — the #1 Enterprise upgrade trigger. When security/IT
+   asks about SSO, the upgrade conversation has already started.

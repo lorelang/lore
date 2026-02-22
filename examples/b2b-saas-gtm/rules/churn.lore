@@ -1,0 +1,97 @@
+---
+domain: Churn Risk
+description: >
+  Rules that identify accounts at risk of contraction
+  or churn and recommend intervention plays.
+---
+
+## champion-departure-alert
+  applies_to: Account
+  severity: critical
+  trigger: Contact with role=champion becomes inactive or leaves
+
+  condition:
+    Contact WHERE account = this
+      AND role = "champion"
+      AND (last_engaged < now() - 60d OR title changed)
+
+  action:
+    Create Signal with type = "Champion Departure"
+    Set signal.strength = "strong"
+    Set signal.direction = "contraction"
+    Set account.stage = "at-risk" IF health_score < 60
+    Notify csm_owner immediately
+
+  Champion departure is historically our #1 churn predictor.
+  When detected, the CSM should:
+  1. Confirm whether the champion has left or changed roles
+  2. If left: identify and cultivate a new champion within 14 days
+  3. If changed roles: assess whether new role still touches product
+  4. Map the remaining stakeholder landscape — is there anyone
+     else who can advocate for renewal?
+
+  If no replacement champion is identified within 30 days,
+  escalate to CSM manager for executive intervention.
+
+## usage-decline-alert
+  applies_to: Account
+  severity: warning
+  trigger: Usage trend shifts to declining
+
+  condition:
+    usage.usage_trend = "declining"
+    AND usage.active_users < 0.7 * avg(usage.active_users, last 3 months)
+
+  action:
+    Create Signal with type = "Usage Decline"
+    Set signal.strength based on decline severity:
+      - >40% decline: "strong"
+      - 20-40% decline: "moderate"
+    Recommended play: "Value realization check-in — don't
+    lead with 'we noticed your usage dropped.' Instead ask
+    about their current priorities and whether the product
+    is aligned with what they need right now."
+
+## competitor-threat
+  applies_to: Account
+  severity: critical
+  trigger: Competitor mentioned in interaction
+
+  condition:
+    Interaction WHERE account = this
+      AND topics includes any of ["competitor", known_competitor_names]
+      AND sentiment IN ["negative", "neutral"]
+      AND timestamp > now() - 30d
+
+  action:
+    Create Signal with type = "Competitor Mention"
+    Set signal.strength = "strong"
+    Set signal.direction = "contraction"
+    Notify csm_owner AND ae_owner immediately
+
+  Competitor mentions combined with negative sentiment are
+  an acute threat. The response must be fast and strategic —
+  not defensive. The play is to understand what gap the
+  competitor appears to fill and address it directly.
+
+## renewal-risk-scoring
+  applies_to: Subscription
+  severity: warning
+  trigger: Subscription within 90 days of renewal
+
+  condition:
+    subscription.renewal_date < now() + 90d
+    AND subscription.status = "active"
+
+  Evaluate renewal risk based on composite factors:
+  - Seat utilization < 0.6 → high contraction risk
+  - Health score < 40 → high churn risk
+  - No champion identified → elevated risk
+  - No executive engagement in 90+ days → elevated risk
+  - NRR trailing 12m < 0.9 → prior contraction pattern
+
+  action:
+    Calculate composite renewal risk score
+    If high risk: escalate to csm_owner + manager
+    If medium risk: add to CSM priority queue
+    Recommended play depends on primary risk factor
