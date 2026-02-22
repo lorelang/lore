@@ -10,11 +10,17 @@ Lorelang follows semantic versioning at language and package level:
 - `MINOR` for backward-compatible feature additions
 - `PATCH` for backward-compatible fixes and clarifications
 
-Current single-version model uses the same number across:
+Package version is authoritative in:
 
 - `pyproject.toml` (`project.version`)
 - `src/lore/__init__.py` (`__version__`)
-- spec heading in `spec/SPECIFICATION.md`
+
+Language spec version is tracked in:
+
+- `spec/SPECIFICATION.md` heading
+
+In many releases these stay aligned, but patch releases may update package
+version without changing language spec version.
 
 ## How to Choose a Bump
 
@@ -31,7 +37,7 @@ Use these rules:
 3. Bump version in:
    - `pyproject.toml`
    - `src/lore/__init__.py`
-   - `spec/SPECIFICATION.md` (if language version changed)
+   - `spec/SPECIFICATION.md` (only if language version changed)
    - tests that pin the version (for example `tests/test_v02_features.py`)
 4. Run quality gates:
    - `make launch-check`

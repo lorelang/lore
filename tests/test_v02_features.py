@@ -21,10 +21,10 @@ from lore.validator import validate, Severity
 # ---------------------------------------------------------------------------
 
 class TestVersion:
-    def test_version_is_0_2_0(self):
-        """Library version should be 0.2.0."""
+    def test_version_is_0_2_1(self):
+        """Library version should be 0.2.1."""
         from lore import __version__
-        assert __version__ == "0.2.0"
+        assert __version__ == "0.2.1"
 
     def test_plugin_config_exported(self):
         """PluginConfig should be importable from lore."""
