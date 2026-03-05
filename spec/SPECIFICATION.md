@@ -24,7 +24,7 @@ Lore is **not a runtime query engine**. If you need real-time graph queries, com
 
 | Concern | In Scope | Out of Scope |
 |---------|----------|-------------|
-| Domain knowledge | Entities, relationships, rules, taxonomies, glossary, prose | Raw conversation logs, interaction traces |
+| Domain knowledge | Entities, relationships, rules, taxonomies, glossary, decisions, prose | Raw conversation logs, interaction traces |
 | Knowledge lifecycle | Author → validate → compile → observe → outcomes → evolve | Real-time streaming, pub/sub, event sourcing |
 | Agent context | Compiled system prompts, embedding chunks, structured JSON | Agent memory, session state, user profiles |
 | Quality assurance | Validation (correctness) + curation (quality) | Runtime monitoring, APM, alerting |
@@ -70,7 +70,7 @@ silent breaks. Any behavior-impacting change should include migration notes.
 
 ## File Types
 
-Lore recognizes eight file types, determined by their location in the directory structure:
+Lore recognizes nine file types, determined by their location in the directory structure:
 
 | Directory          | Purpose                          | Defines                          |
 |-------------------|----------------------------------|----------------------------------|
@@ -82,6 +82,7 @@ Lore recognizes eight file types, determined by their location in the directory 
 | `views/`          | Team-scoped perspectives         | Filtered slices of the ontology  |
 | `observations/`   | AI agent and expert field notes  | What was observed in the domain  |
 | `outcomes/`       | Retrospectives                   | What actually happened           |
+| `decisions/`      | Operational decisions            | What was decided, why, and what it affects |
 
 A root `lore.yaml` manifest describes the ontology metadata.
 
@@ -390,6 +391,80 @@ Outcomes support two inline markers that are extracted by the parser:
 - **`Takeaway:`** — A learning signal. The `lore evolve` command scans for these to generate improvement proposals.
 - **`Ref:`** — A cross-reference to an observation file and heading. Format: `observations/filename.lore#heading-slug`.
 
+### Decisions (v0.2.1)
+
+Decisions record operational choices and their rationale — the "why" behind how the domain works. They sit between schema (what can exist) and records (what does exist), capturing the meta-level operational knowledge that makes a domain predictive rather than just descriptive.
+
+```
+---
+decision: Seasonal Churn Exception
+decided_by: VP Customer Success
+date: 2025-07-15
+status: stable
+provenance:
+  author: outcome-tracker-agent
+  source: domain-expert
+  confidence: 0.92
+  created: 2025-07-15
+---
+
+## Exempt cyclical industries from usage-decline alerts
+
+## Context
+
+Beta Corp was flagged as churn risk by usage-decline-alert,
+but the usage drop was seasonal. Retail accounts routinely
+drop 40-60% in Q3.
+
+## Resolution
+
+Add seasonal adjustment to usage-decline-alert rule.
+Accounts in cyclical industries are exempt during known
+off-season periods.
+
+## Rationale
+
+Fact: Retail accounts show 40-60% usage drop every Q3
+Precedent: Three previous false positives on seasonal accounts in 2024
+Belief: Seasonal patterns are predictable enough to exempt automatically
+
+## Affects
+- rules/churn-risk.lore#usage-decline-alert
+- entities/account.lore
+
+## Evidence
+- outcomes/q2-retrospective.lore#beta-corp-churn-risk
+- observations/usage-patterns.lore#seasonal-retail-dip
+```
+
+| Frontmatter Field | Type   | Description                                |
+|-------------------|--------|--------------------------------------------|
+| `decision`        | string | Name of this decision (or collection)     |
+| `decided_by`      | string | Person or agent who made the decision     |
+| `date`            | date   | When the decision was made                |
+
+#### Sections
+
+Each `##` heading introduces either a new decision or a sub-section of the current decision. The recognized sub-section names are:
+
+- **Context** — What situation prompted the decision
+- **Resolution** — What was decided
+- **Rationale** — Why, using claim markers (`Fact:`, `Belief:`, `Value:`, `Precedent:`)
+- **Affects** — Cross-references to rules, entities, or other ontology elements (list items)
+- **Evidence** — Cross-references to observations or outcomes (list items)
+
+If a `##` heading is not one of these sub-section names, it starts a new decision within the same file. This allows a single file to record multiple related decisions (e.g., all decisions from a quarterly review).
+
+#### Why Decisions Are Not Observations
+
+Observations record *what was noticed* — they're passive. Decisions record *what was chosen* — they're intentional. A decision has:
+
+- A **resolution** (observations have no resolution — they just describe)
+- An **affects** list (observations don't change rules — decisions do)
+- **Rationale with claims** (observations have claims too, but a decision's claims explain the choice, not just the pattern)
+
+An observation might say "seasonal accounts show usage drops." A decision says "therefore we exempt them from churn alerts, because [rationale], affecting [these rules]."
+
 ### Prose Blocks
 
 Any section can contain freeform prose paragraphs. These are preserved as-is for LLM reasoning but are not formally parsed for structure. This is by design — some knowledge is best expressed in natural language.
@@ -402,6 +477,34 @@ and commercial activity. New accounts start as "prospect"
 and move to "onboarding" upon first contract signature.
 ```
 
+## Operational Knowledge: The Layer Between Schema and Records
+
+An ontology traditionally defines **what can exist** (schema) while a database holds **what does exist** (records). Between these two layers is **operational knowledge** — the patterns, decisions, exceptions, and rationale that describe **how things actually work**.
+
+Lore captures operational knowledge across several file types:
+
+| Concept | Where in Lore | Role |
+|---------|--------------|------|
+| Patterns / archetypes | Taxonomies + observation claims | How entities cluster operationally |
+| Standard procedures | Rules (conditions + actions) | What to do when conditions are met |
+| Exceptions | Decisions (with `affects:` cross-refs) | When and why standard rules don't apply |
+| Choices and rationale | Decisions (context + resolution + rationale) | What was decided and why |
+| Precedents | Observation `Precedent:` claims + decision evidence | Historical patterns that inform future choices |
+| Learning signals | Outcome takeaways | What predictions were right/wrong and what to adjust |
+
+Together, these form a **traversable operational model**: given a new situation, an agent can classify it (taxonomies), find applicable rules, check for relevant decisions and exceptions, read the rationale, and predict what should happen — with explainability.
+
+### Future: Addressable Claims and Rule Exceptions
+
+The current implementation captures decisions as first-class file types with cross-references to the rules and entities they affect. Future versions may extend this with:
+
+- **Addressable claims**: `Precedent [skip-prereq-churn]: text` — giving claims IDs so decisions can reference specific precedents
+- **Rule exception blocks**: `exceptions:` on rules that reference the decisions creating them, with conditions
+- **Causal claim types**: `Cause:` and `Effect:` markers for capturing mechanisms, not just patterns
+- **Decision graph traversal**: querying "all decisions affecting rule X" or "all exceptions for entity type Y"
+
+These are tracked as language debt for consideration in future minor versions.
+
 ## The Self-Updating Loop
 
 Lore v0.2 introduces a feedback loop where AI agents can contribute back to the ontology:
@@ -411,6 +514,9 @@ Lore v0.2 introduces a feedback loop where AI agents can contribute back to the 
        ^                                              │
        │                                              v
   proposals/ <──evolve── outcomes/ <──record── AI agent acts
+                              │
+                              v
+                        decisions/  <── human or agent records operational choices
 ```
 
 1. **Compile**: `.lore` files are compiled to an AI agent context.
@@ -706,6 +812,7 @@ ontology.glossary          # Glossary
 ontology.views             # list[View]
 ontology.observation_files # list[ObservationFile]
 ontology.outcome_files     # list[OutcomeFile]
+ontology.decision_files    # list[DecisionFile]
 
 # Convenience properties
 ontology.entity_names      # set[str]
@@ -716,6 +823,7 @@ ontology.all_glossary_entries # list[GlossaryEntry]
 ontology.all_observations  # list[Observation]
 ontology.all_outcomes      # list[Outcome]
 ontology.all_takeaways     # list[str]
+ontology.all_decisions     # list[Decision]
 ```
 
 Plugin authors code against this interface. As long as the `Ontology` object is stable, plugins don't break.
@@ -820,7 +928,7 @@ lore curate <dir> --dry-run            Report only, suppress suggestions
 
 `setup` aliases: `/setup`, `lore:setup`, `/lore:setup`
 
-Compilation targets: `neo4j`, `json`, `jsonld`, `agent`, `embeddings`, `mermaid`, `palantir`
+Compilation targets: `neo4j`, `json`, `jsonld`, `agent`, `embeddings`, `mermaid`, `palantir`, `tools`, `agents.md`, `metrics`
 
 Curation jobs: `staleness`, `coverage`, `consistency`, `index`, `summarize`, `all`
 
@@ -877,6 +985,8 @@ my-ontology/
 │   └── market-changes.lore
 ├── outcomes/                    # Retrospectives
 │   └── q2-retrospective.lore
+├── decisions/                   # Operational decisions + rationale
+│   └── seasonal-churn-exception.lore
 ├── proposals/                   # Generated by lore evolve
 │   └── adjust-usage-rule.lore
 └── _compiled/                   # Generated outputs (gitignored)

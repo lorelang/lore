@@ -239,6 +239,39 @@ def compile_embeddings(ontology: Ontology) -> str:
                 "metadata": outcome_meta,
             })
 
+    # Decision chunks (one per decision)
+    for df in ontology.decision_files:
+        for dec in df.decisions:
+            dec_meta = {}
+            if df.decided_by:
+                dec_meta["decided_by"] = df.decided_by
+            if df.date:
+                dec_meta["date"] = df.date
+            if df.status:
+                dec_meta["status"] = df.status
+            if dec.affects:
+                dec_meta["affects"] = dec.affects
+            if dec.evidence:
+                dec_meta["evidence"] = dec.evidence
+            dec_meta["source"] = str(df.source_file)
+
+            text_parts = [f"Decision: {dec.heading}"]
+            if dec.context:
+                text_parts.append(f"Context: {dec.context}")
+            if dec.resolution:
+                text_parts.append(f"Resolution: {dec.resolution}")
+            if dec.rationale:
+                text_parts.append(f"Rationale: {dec.rationale}")
+            for claim in dec.rationale_claims:
+                text_parts.append(f"{claim.kind.title()}: {claim.text}")
+
+            chunks.append({
+                "id": f"decision:{df.name}:{dec.heading}",
+                "type": "decision",
+                "text": "\n".join(p for p in text_parts if p),
+                "metadata": dec_meta,
+            })
+
     # Output as JSON Lines
     return "\n".join(json.dumps(chunk) for chunk in chunks)
 

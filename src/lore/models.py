@@ -21,6 +21,7 @@ class FileType(Enum):
     VIEW = "view"
     OBSERVATION = "observation"
     OUTCOME = "outcome"
+    DECISION = "decision"
 
 
 @dataclass
@@ -218,6 +219,30 @@ class OutcomeFile:
 
 
 @dataclass
+class Decision:
+    """A single decision (one ## section in a decision file)."""
+    heading: str
+    context: str = ""               # What situation prompted the decision
+    resolution: str = ""            # What was decided
+    rationale: str = ""             # Why — prose, may contain claims
+    rationale_claims: list[KnowledgeClaim] = field(default_factory=list)
+    affects: list[str] = field(default_factory=list)   # Cross-refs to rules/entities
+    evidence: list[str] = field(default_factory=list)  # Cross-refs to observations/outcomes
+
+
+@dataclass
+class DecisionFile:
+    """A file recording operational decisions and their rationale."""
+    name: str
+    decided_by: str = ""            # Person or agent who decided
+    date: str = ""                  # YYYY-MM-DD
+    status: str = ""
+    decisions: list[Decision] = field(default_factory=list)
+    source_file: Optional[Path] = None
+    provenance: Optional[Provenance] = None
+
+
+@dataclass
 class EvolutionConfig:
     """Configuration for the self-updating loop."""
     proposals: str = "open"      # open | review-required | closed
@@ -256,6 +281,7 @@ class Ontology:
     views: list[View] = field(default_factory=list)
     observation_files: list[ObservationFile] = field(default_factory=list)
     outcome_files: list[OutcomeFile] = field(default_factory=list)
+    decision_files: list[DecisionFile] = field(default_factory=list)
     extensions: dict[str, list] = field(default_factory=dict)
 
     @property
@@ -292,4 +318,10 @@ class Ontology:
 
     @property
     def all_claims(self) -> list[KnowledgeClaim]:
-        return [c for o in self.all_observations for c in o.claims]
+        claims = [c for o in self.all_observations for c in o.claims]
+        claims.extend(c for d in self.all_decisions for c in d.rationale_claims)
+        return claims
+
+    @property
+    def all_decisions(self) -> list[Decision]:
+        return [d for df in self.decision_files for d in df.decisions]

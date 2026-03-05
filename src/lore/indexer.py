@@ -70,6 +70,7 @@ def generate_root_index(ontology: Ontology, root_dir: Path,
     n_obs = len(ontology.all_observations)
     n_claims = len(ontology.all_claims)
     n_outcomes = len(ontology.all_outcomes)
+    n_decisions = len(ontology.all_decisions)
     n_views = len(ontology.views)
     n_glossary = len(ontology.all_glossary_entries)
 
@@ -77,7 +78,7 @@ def generate_root_index(ontology: Ontology, root_dir: Path,
     lines.append("")
     lines.append(f"- {n_entities} entities, {n_rels} relationships, {n_rules} rules")
     lines.append(f"- {n_tax} taxonomies, {n_glossary} glossary terms")
-    lines.append(f"- {n_obs} observations, {n_claims} claims, {n_outcomes} outcomes")
+    lines.append(f"- {n_obs} observations, {n_claims} claims, {n_outcomes} outcomes, {n_decisions} decisions")
     lines.append(f"- {n_views} views")
     lines.append("")
 
@@ -94,6 +95,7 @@ def generate_root_index(ontology: Ontology, root_dir: Path,
         "views": "Team-scoped perspectives (filtered ontology slices)",
         "observations": "Field notes from AI agents and domain experts",
         "outcomes": "Retrospectives — what actually happened",
+        "decisions": "Operational decisions — what was chosen and why",
     }
 
     for dirname, desc in dir_descriptions.items():
@@ -364,7 +366,7 @@ def generate_all_indexes(ontology: Ontology, root_dir: Path,
 
     # Directory indexes
     known_dirs = ["entities", "relationships", "rules", "taxonomies",
-                  "glossary", "views", "observations", "outcomes"]
+                  "glossary", "views", "observations", "outcomes", "decisions"]
 
     for dirname in known_dirs:
         dir_path = root_dir / dirname

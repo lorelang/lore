@@ -1,0 +1,42 @@
+---
+decision: Seasonal Churn Exception
+decided_by: VP Customer Success
+date: 2025-07-15
+status: stable
+provenance:
+  author: outcome-tracker-agent
+  source: domain-expert
+  confidence: 0.92
+  created: 2025-07-15
+---
+
+## Exempt cyclical industries from usage-decline alerts
+
+## Context
+
+Beta Corp was flagged as churn risk by the usage-decline-alert rule,
+but the usage drop was seasonal. Retail and agriculture accounts
+routinely show 40-60% usage drops during their off-season quarters.
+Three previous false positives on seasonal accounts in 2024 (Q1, Q2, Q3)
+confirm this is a recurring pattern, not a one-off.
+
+## Resolution
+
+Add seasonal adjustment to the usage-decline-alert rule. Accounts
+in cyclical industries (retail, agriculture, tourism) are exempt
+from churn risk alerts during their known off-season periods.
+
+## Rationale
+
+Fact: Retail accounts show 40-60% usage drop every Q3
+Precedent: Three previous false positives on seasonal accounts in 2024
+Belief: Seasonal patterns are predictable enough to exempt automatically
+Value: Reducing false positive noise improves CSM trust in alert system
+
+## Affects
+- rules/churn-risk.lore#usage-decline-alert
+- entities/account.lore
+
+## Evidence
+- outcomes/q2-retrospective.lore#beta-corp-churn-risk-false-positive
+- observations/feature-adoption-patterns.lore

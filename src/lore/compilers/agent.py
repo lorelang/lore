@@ -13,13 +13,23 @@ from typing import Optional
 from ..view_scope import resolve_view_scope
 
 
-def compile_agent_context(ontology: Ontology, view_name: Optional[str] = None) -> str:
+def compile_agent_context(
+    ontology: Ontology,
+    view_name: Optional[str] = None,
+    budget_tokens: Optional[int] = None,
+) -> str:
     """
     Compile ontology to an AI agent context document.
 
     If view_name is provided, scopes the context to that view.
+    If budget_tokens is provided, uses the projection system to
+    render entities at varying fidelity levels to fit within budget.
     Otherwise, includes the full ontology.
     """
+    # If budget is specified, delegate to projected rendering
+    if budget_tokens is not None:
+        return _compile_with_budget(ontology, view_name, budget_tokens)
+
     lines: list[str] = []
     name = ontology.manifest.name if ontology.manifest else "domain"
     desc = ontology.manifest.description if ontology.manifest else ""
@@ -304,6 +314,39 @@ def compile_agent_context(ontology: Ontology, view_name: Optional[str] = None) -
         lines.append("</outcomes>")
         lines.append("")
 
+    # Decisions
+    if ontology.decision_files:
+        lines.append("<decisions>")
+        lines.append("Operational decisions and their rationale:")
+        lines.append("")
+        for df in ontology.decision_files:
+            meta_parts = []
+            if df.decided_by:
+                meta_parts.append(f"by {df.decided_by}")
+            if df.date:
+                meta_parts.append(f"on {df.date}")
+            meta = f" ({', '.join(meta_parts)})" if meta_parts else ""
+            for decision in df.decisions:
+                lines.append(f"  <decision>{decision.heading}{meta}")
+                if decision.context:
+                    lines.append(f"    Context: {decision.context}")
+                if decision.resolution:
+                    lines.append(f"    Resolution: {decision.resolution}")
+                if decision.rationale or decision.rationale_claims:
+                    lines.append(f"    Rationale:")
+                    if decision.rationale:
+                        lines.append(f"      {decision.rationale}")
+                    for claim in decision.rationale_claims:
+                        lines.append(f"      - {claim.kind}: {claim.text}")
+                if decision.affects:
+                    lines.append(f"    Affects: {', '.join(decision.affects)}")
+                if decision.evidence:
+                    lines.append(f"    Evidence: {', '.join(decision.evidence)}")
+                lines.append(f"  </decision>")
+                lines.append("")
+        lines.append("</decisions>")
+        lines.append("")
+
     # Key questions (from view)
     if view and view.key_questions:
         lines.append("<key_questions>")
@@ -315,6 +358,315 @@ def compile_agent_context(ontology: Ontology, view_name: Optional[str] = None) -
 
     lines.append("</domain_ontology>")
 
+    return "\n".join(lines)
+
+
+def _compile_with_budget(
+    ontology: Ontology,
+    view_name: Optional[str],
+    budget_tokens: int,
+) -> str:
+    """Compile agent context with token budget enforcement."""
+    from ..projection import (
+        ContextProjector, RenderTier, TIER_RENDERERS,
+        estimate_tokens,
+    )
+
+    name = ontology.manifest.name if ontology.manifest else "domain"
+    desc = ontology.manifest.description if ontology.manifest else ""
+
+    # Find view if specified
+    view: Optional[View] = None
+    if view_name:
+        for v in ontology.views:
+            if v.name.lower() == view_name.lower():
+                view = v
+                break
+
+    scope = resolve_view_scope(ontology, view) if view else None
+    in_scope_entities = (
+        set(scope.entity_names)
+        if scope
+        else {e.name for e in ontology.entities}
+    )
+
+    # Create projection plan
+    projector = ContextProjector(ontology, budget_tokens, view)
+    plan = projector.plan()
+
+    lines: list[str] = []
+
+    # Overview (always included)
+    lines.append("<domain_ontology>")
+    if plan.section_flags.get("overview", True):
+        lines.append("<overview>")
+        lines.append(f"Domain: {name}")
+        if desc:
+            lines.append(f"Description: {desc}")
+        if view:
+            lines.append(f"Scoped to view: {view.name}")
+            lines.append(f"Audience: {view.audience}")
+            if view.description:
+                lines.append(f"View purpose: {view.description}")
+        lines.append("Interpretation mode: unstructured-first")
+        lines.append("</overview>")
+        lines.append("")
+
+    # Guidance
+    if plan.section_flags.get("guidance", True):
+        lines.append("<agent_guidance>")
+        lines.append("Treat this ontology as narrative domain knowledge first, schema second.")
+        lines.append("Prioritize prose sections (notes, lifecycle, observations, outcomes) when reasoning.")
+        lines.append("Use structured fields (types, constraints, traversals) as guardrails, not as the sole truth source.")
+        lines.append("When claims conflict, weigh recency, confidence, and precedents before deciding.")
+        lines.append("</agent_guidance>")
+        lines.append("")
+
+    # Entities at their assigned tiers
+    if plan.section_flags.get("entities", True):
+        lines.append("<entities>")
+        for entity in ontology.entities:
+            if entity.name not in in_scope_entities:
+                continue
+            tier = plan.entity_tiers.get(entity.name, RenderTier.OMIT)
+            if tier == RenderTier.OMIT:
+                continue
+            renderer = TIER_RENDERERS.get(tier)
+            if renderer:
+                lines.append(renderer(entity))
+                lines.append("")
+        lines.append("</entities>")
+        lines.append("")
+
+    # Relationships
+    if plan.section_flags.get("relationships", False):
+        relationship_scope = scope.relationship_names if scope else None
+        lines.append("<relationships>")
+        for rel in ontology.all_relationships:
+            if view:
+                if relationship_scope is not None:
+                    if rel.name not in relationship_scope:
+                        continue
+                elif in_scope_entities:
+                    if (rel.from_entity not in in_scope_entities
+                            and rel.to_entity not in in_scope_entities):
+                        continue
+            lines.append(
+                f"  {rel.from_entity} -[{rel.name}]-> {rel.to_entity} "
+                f"({rel.cardinality})"
+            )
+            if rel.description:
+                lines.append(f"    {rel.description}")
+        lines.append("</relationships>")
+        lines.append("")
+
+    # Traversals
+    if plan.section_flags.get("traversals", False):
+        traversal_scope = scope.traversal_names if scope else None
+        lines.append("<traversals>")
+        lines.append("These are valid multi-hop reasoning paths in this domain:")
+        lines.append("")
+        for trav in ontology.all_traversals:
+            if view:
+                include = True
+                if traversal_scope is not None:
+                    include = trav.name in traversal_scope
+                elif in_scope_entities:
+                    include = any(entity in trav.path for entity in in_scope_entities)
+                if not include:
+                    continue
+            lines.append(f"  {trav.name}:")
+            lines.append(f"    Path: {trav.path}")
+            if trav.description:
+                lines.append(f"    Use: {trav.description}")
+            lines.append("")
+        lines.append("</traversals>")
+        lines.append("")
+
+    # Rules
+    if plan.section_flags.get("rules", False):
+        rule_scope = scope.rule_names if scope else None
+        lines.append("<rules>")
+        for rule in ontology.all_rules:
+            if view:
+                if rule_scope is not None:
+                    if rule.name not in rule_scope:
+                        continue
+                elif (rule.applies_to and in_scope_entities
+                      and rule.applies_to not in in_scope_entities):
+                    continue
+            lines.append(f'<rule name="{rule.name}">')
+            if rule.applies_to:
+                lines.append(f"  Applies to: {rule.applies_to}")
+            if rule.severity:
+                lines.append(f"  Severity: {rule.severity}")
+            if rule.trigger:
+                lines.append(f"  Trigger: {rule.trigger}")
+            if rule.condition:
+                lines.append(f"  Condition: {rule.condition}")
+            if rule.action:
+                lines.append(f"  Action: {rule.action}")
+            if rule.prose:
+                lines.append(f"  Context: {rule.prose}")
+            lines.append(f"</rule>")
+            lines.append("")
+        lines.append("</rules>")
+        lines.append("")
+
+    # Taxonomies
+    if plan.section_flags.get("taxonomies", False) and ontology.taxonomies:
+        lines.append("<taxonomies>")
+        for tax in ontology.taxonomies:
+            lines.append(f'<taxonomy name="{tax.name}" applied_to="{tax.applied_to}">')
+            if tax.root:
+                _render_taxonomy_text(tax.root, lines, indent=2)
+            if tax.inheritance_rules:
+                lines.append(f"  Inheritance rules: {tax.inheritance_rules}")
+            lines.append(f"</taxonomy>")
+            lines.append("")
+        lines.append("</taxonomies>")
+        lines.append("")
+
+    # Glossary
+    if plan.section_flags.get("glossary", False):
+        if ontology.glossary and ontology.glossary.entries:
+            lines.append("<glossary>")
+            lines.append("Canonical definitions — use these when interpreting user queries:")
+            lines.append("")
+            for entry in ontology.glossary.entries:
+                lines.append(f"  {entry.term}: {entry.definition}")
+                lines.append("")
+            lines.append("</glossary>")
+            lines.append("")
+
+    # Observations
+    if plan.section_flags.get("observations", False) and ontology.observation_files:
+        conflicting_obs = _detect_observation_conflicts(ontology)
+        lines.append("<observations>")
+        lines.append("Field notes from AI agents and domain experts:")
+        lines.append("")
+        for of in ontology.observation_files:
+            if view and of.about and of.about not in in_scope_entities:
+                continue
+            meta_parts = []
+            if of.observed_by:
+                meta_parts.append(f"by {of.observed_by}")
+            if of.date:
+                meta_parts.append(f"on {of.date}")
+            if of.confidence is not None:
+                meta_parts.append(f"confidence={of.confidence}")
+            if of.about:
+                meta_parts.append(f"about {of.about}")
+            meta = f" ({', '.join(meta_parts)})" if meta_parts else ""
+            for obs in of.observations:
+                source_key = str(of.source_file) if of.source_file else of.name
+                obs_key = (of.about, source_key, obs.heading)
+                if obs_key in conflicting_obs:
+                    lines.append(f"  <observation conflict=\"true\">{obs.heading}{meta}")
+                    lines.append(f"    {obs.prose}")
+                    if obs.claims:
+                        lines.append("    Claims:")
+                        for claim in obs.claims:
+                            lines.append(f"      - {claim.kind}: {claim.text}")
+                    for contradiction in conflicting_obs[obs_key]:
+                        lines.append(f"    [CONFLICT: {contradiction}]")
+                    lines.append(f"  </observation>")
+                else:
+                    lines.append(f"  <observation>{obs.heading}{meta}")
+                    lines.append(f"    {obs.prose}")
+                    if obs.claims:
+                        lines.append("    Claims:")
+                        for claim in obs.claims:
+                            lines.append(f"      - {claim.kind}: {claim.text}")
+                    lines.append(f"  </observation>")
+                lines.append("")
+        lines.append("</observations>")
+        lines.append("")
+
+    # Outcomes
+    if plan.section_flags.get("outcomes", False) and ontology.outcome_files:
+        lines.append("<outcomes>")
+        lines.append("Retrospectives comparing predictions to reality:")
+        lines.append("")
+        for of in ontology.outcome_files:
+            meta_parts = []
+            if of.reviewed_by:
+                meta_parts.append(f"by {of.reviewed_by}")
+            if of.date:
+                meta_parts.append(f"on {of.date}")
+            meta = f" ({', '.join(meta_parts)})" if meta_parts else ""
+            for outcome in of.outcomes:
+                lines.append(f"  <outcome>{outcome.heading}{meta}")
+                lines.append(f"    {outcome.prose}")
+                if outcome.takeaways:
+                    for t in outcome.takeaways:
+                        lines.append(f"    Takeaway: {t}")
+                lines.append(f"  </outcome>")
+                lines.append("")
+        lines.append("</outcomes>")
+        lines.append("")
+
+    # Decisions
+    if plan.section_flags.get("decisions", False) and ontology.decision_files:
+        lines.append("<decisions>")
+        lines.append("Operational decisions and their rationale:")
+        lines.append("")
+        for df in ontology.decision_files:
+            meta_parts = []
+            if df.decided_by:
+                meta_parts.append(f"by {df.decided_by}")
+            if df.date:
+                meta_parts.append(f"on {df.date}")
+            meta = f" ({', '.join(meta_parts)})" if meta_parts else ""
+            for decision in df.decisions:
+                lines.append(f"  <decision>{decision.heading}{meta}")
+                if decision.context:
+                    lines.append(f"    Context: {decision.context}")
+                if decision.resolution:
+                    lines.append(f"    Resolution: {decision.resolution}")
+                if decision.rationale or decision.rationale_claims:
+                    lines.append(f"    Rationale:")
+                    if decision.rationale:
+                        lines.append(f"      {decision.rationale}")
+                    for claim in decision.rationale_claims:
+                        lines.append(f"      - {claim.kind}: {claim.text}")
+                if decision.affects:
+                    lines.append(f"    Affects: {', '.join(decision.affects)}")
+                if decision.evidence:
+                    lines.append(f"    Evidence: {', '.join(decision.evidence)}")
+                lines.append(f"  </decision>")
+                lines.append("")
+        lines.append("</decisions>")
+        lines.append("")
+
+    # Key questions from view
+    if view and view.key_questions:
+        lines.append("<key_questions>")
+        lines.append("This view is designed to answer these types of questions:")
+        for q in view.key_questions:
+            lines.append(f"  - {q}")
+        lines.append("</key_questions>")
+        lines.append("")
+
+    # Budget metadata
+    tier_counts = {}
+    for tier in RenderTier:
+        count = sum(1 for t in plan.entity_tiers.values() if t == tier)
+        if count:
+            tier_counts[tier.name] = count
+
+    lines.append("<budget_metadata>")
+    lines.append(f"  Total budget: {plan.budget_total} tokens")
+    lines.append(f"  Used: {plan.budget_used} tokens")
+    lines.append(f"  Utilization: {plan.budget_utilization:.0%}")
+    for tier_name, count in tier_counts.items():
+        lines.append(f"  {tier_name}: {count} entities")
+    if plan.dropped_entities:
+        lines.append(f"  Dropped: {', '.join(plan.dropped_entities)}")
+    lines.append("</budget_metadata>")
+    lines.append("")
+
+    lines.append("</domain_ontology>")
     return "\n".join(lines)
 
 
