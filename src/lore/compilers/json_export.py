@@ -44,6 +44,7 @@ def compile_json(ontology: Ontology) -> str:
         "views": [_serialize_view(v) for v in ontology.views],
         "observations": [_serialize_observation_file(of) for of in ontology.observation_files],
         "outcomes": [_serialize_outcome_file(of) for of in ontology.outcome_files],
+        "decisions": [_serialize_decision_file(df) for df in ontology.decision_files],
         "extensions": ontology.extensions,
     }
     return json.dumps(data, indent=2, default=str)
@@ -212,4 +213,29 @@ def _serialize_outcome_file(of) -> dict:
         ],
     }
     result.update(_serialize_provenance(of.provenance, of.status))
+    return result
+
+
+def _serialize_decision_file(df) -> dict:
+    result = {
+        "name": df.name,
+        "decided_by": df.decided_by,
+        "date": df.date,
+        "decisions": [
+            {
+                "heading": d.heading,
+                "context": d.context,
+                "resolution": d.resolution,
+                "rationale": d.rationale,
+                "rationale_claims": [
+                    {"kind": c.kind, "text": c.text}
+                    for c in d.rationale_claims
+                ],
+                "affects": d.affects,
+                "evidence": d.evidence,
+            }
+            for d in df.decisions
+        ],
+    }
+    result.update(_serialize_provenance(df.provenance, df.status))
     return result

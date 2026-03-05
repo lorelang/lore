@@ -60,6 +60,7 @@ def validate(ontology: Ontology) -> list[Diagnostic]:
     diagnostics.extend(_check_provenance(ontology))
     diagnostics.extend(_check_observations(ontology))
     diagnostics.extend(_check_outcomes(ontology))
+    diagnostics.extend(_check_decisions(ontology))
 
     return diagnostics
 
@@ -368,6 +369,9 @@ def _check_provenance(ont: Ontology) -> list[Diagnostic]:
     for of in ont.outcome_files:
         items.append((of.name, "OutcomeFile", of.provenance, of.status,
                       str(of.source_file) if of.source_file else of.name))
+    for df in ont.decision_files:
+        items.append((df.name, "DecisionFile", df.provenance, df.status,
+                      str(df.source_file) if df.source_file else df.name))
 
     # Track deprecated entities for reference checking
     deprecated_entities = set()
@@ -527,5 +531,95 @@ def _check_outcomes(ont: Ontology) -> list[Diagnostic]:
                             f"Outcome '{outcome.heading}' references unknown observation file '{ref_path}'",
                             src,
                         ))
+
+    return diags
+
+
+def _check_decisions(ont: Ontology) -> list[Diagnostic]:
+    diags: list[Diagnostic] = []
+    entity_names = ont.entity_names
+    rule_names = {r.name for r in ont.all_rules}
+
+    for df in ont.decision_files:
+        src = str(df.source_file) if df.source_file else df.name
+
+        if not df.decisions:
+            diags.append(Diagnostic(
+                Severity.WARNING,
+                f"Decision file '{df.name}' has no decision sections",
+                src,
+            ))
+
+        if df.date and not _is_iso_date(df.date):
+            diags.append(Diagnostic(
+                Severity.WARNING,
+                f"Decision '{df.name}' has invalid date '{df.date}' (expected YYYY-MM-DD)",
+                src,
+            ))
+
+        for decision in df.decisions:
+            # Validate rationale claims
+            for claim in decision.rationale_claims:
+                if claim.kind not in VALID_CLAIM_KINDS:
+                    diags.append(Diagnostic(
+                        Severity.WARNING,
+                        f"Decision '{decision.heading}' has unknown claim kind '{claim.kind}'",
+                        src,
+                    ))
+
+            # Validate affects references (best-effort: check entity and rule refs)
+            for ref in decision.affects:
+                # References can be paths like "rules/alerts.lore#rule-name"
+                # or bare names like "Account" (entity) or "usage-decline-alert" (rule)
+                bare = ref.split("#")[-1] if "#" in ref else ref
+                # Strip directory prefix for path-style refs
+                if "/" in bare:
+                    bare = bare.rsplit("/", 1)[-1]
+                    bare = bare.replace(".lore", "")
+                # We only info-check, not error, since affects can reference
+                # many different kinds of things
+                if (bare and bare not in entity_names
+                        and bare not in rule_names
+                        and not ref.startswith("entities/")
+                        and not ref.startswith("rules/")):
+                    diags.append(Diagnostic(
+                        Severity.INFO,
+                        f"Decision '{decision.heading}' affects '{ref}' — "
+                        f"could not resolve to a known entity or rule",
+                        src,
+                    ))
+
+            # Validate evidence references (check observation/outcome file refs)
+            obs_names = {o.source_file.name if o.source_file else ""
+                         for o in ont.observation_files}
+            outcome_names = {o.source_file.name if o.source_file else ""
+                             for o in ont.outcome_files}
+            for ref in decision.evidence:
+                if ref.startswith("observations/"):
+                    ref_filename = ref.split("#")[0].replace("observations/", "")
+                    if ref_filename and ref_filename not in obs_names:
+                        diags.append(Diagnostic(
+                            Severity.WARNING,
+                            f"Decision '{decision.heading}' references unknown "
+                            f"observation file '{ref}'",
+                            src,
+                        ))
+                elif ref.startswith("outcomes/"):
+                    ref_filename = ref.split("#")[0].replace("outcomes/", "")
+                    if ref_filename and ref_filename not in outcome_names:
+                        diags.append(Diagnostic(
+                            Severity.WARNING,
+                            f"Decision '{decision.heading}' references unknown "
+                            f"outcome file '{ref}'",
+                            src,
+                        ))
+
+            # Suggest adding resolution if missing
+            if not decision.resolution:
+                diags.append(Diagnostic(
+                    Severity.INFO,
+                    f"Decision '{decision.heading}' has no Resolution section",
+                    src,
+                ))
 
     return diags

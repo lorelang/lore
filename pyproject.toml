@@ -18,3 +18,8 @@ lore = "lore.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (stress/performance)",
+]

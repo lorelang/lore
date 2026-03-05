@@ -16,7 +16,7 @@ from .models import (
     Relationship, RelationshipProperty, RelationshipFile, Traversal,
     Rule, RuleFile, Taxonomy, TaxonomyNode, Glossary, GlossaryEntry,
     View, Provenance, Observation, ObservationFile, Outcome, OutcomeFile,
-    KnowledgeClaim,
+    KnowledgeClaim, Decision, DecisionFile,
 )
 
 
@@ -86,6 +86,12 @@ def parse_ontology(root_dir: str | Path) -> Ontology:
     if outcomes_dir.exists():
         for f in _lore_files(outcomes_dir):
             ontology.outcome_files.append(_parse_outcome_file(f))
+
+    # Parse decisions
+    decisions_dir = root / "decisions"
+    if decisions_dir.exists():
+        for f in _lore_files(decisions_dir):
+            ontology.decision_files.append(_parse_decision_file(f))
 
     # Parse plugin directories (generic files or plugin parser outputs)
     if ontology.manifest and ontology.manifest.plugins:
@@ -833,3 +839,132 @@ def _parse_outcome_file(path: Path) -> OutcomeFile:
         ))
 
     return of
+
+
+def _split_sections_seq(body: str) -> list[tuple[str, str]]:
+    """Split body into [(section_name, content), ...] preserving order and duplicates."""
+    sections: list[tuple[str, str]] = []
+    current_section = "__preamble__"
+    lines: list[str] = []
+
+    for line in body.split("\n"):
+        if line.startswith("## "):
+            sections.append((current_section, "\n".join(lines).strip()))
+            current_section = line[3:].strip()
+            lines = []
+        else:
+            lines.append(line)
+
+    sections.append((current_section, "\n".join(lines).strip()))
+    return sections
+
+
+def _parse_decision_file(path: Path) -> DecisionFile:
+    """Parse a decisions .lore file."""
+    text = path.read_text()
+    fm, body = _split_frontmatter(text)
+    # Use sequential section splitter to preserve duplicate section names
+    # (e.g. multiple ## Context sections in a multi-decision file)
+    sections = _split_sections_seq(body)
+
+    provenance, status = _parse_provenance(fm)
+
+    df = DecisionFile(
+        name=fm.get("decision", path.stem.replace("-", " ").replace("_", " ").title()),
+        decided_by=fm.get("decided_by", ""),
+        date=str(fm.get("date", "")),
+        source_file=path,
+        provenance=provenance,
+        status=status,
+    )
+
+    # Each ## heading is a separate decision.
+    # Known sub-sections within a decision: Context, Resolution, Rationale, Affects, Evidence.
+    # Strategy: walk sections sequentially and group by decision.
+    # A section is a "decision heading" if it's NOT one of the known sub-section names.
+    _SUB_SECTIONS = {"Context", "Resolution", "Rationale", "Affects", "Evidence"}
+
+    # Build ordered decision groups: list of (heading, {subsection -> content})
+    decision_groups: list[tuple[str, dict[str, str]]] = []
+    current_parts: dict[str, str] | None = None
+    current_heading: str | None = None
+
+    def _ensure_current():
+        nonlocal current_heading, current_parts
+        if current_heading is None:
+            current_heading = fm.get("decision",
+                path.stem.replace("-", " ").replace("_", " ").title())
+            current_parts = {}
+            decision_groups.append((current_heading, current_parts))
+
+    for section_name, content in sections:
+        if section_name == "__preamble__":
+            if content.strip():
+                _ensure_current()
+                current_parts["_preamble"] = content
+            continue
+
+        if section_name in _SUB_SECTIONS:
+            _ensure_current()
+            current_parts[section_name] = content
+        else:
+            # New decision heading
+            current_heading = section_name
+            current_parts = {}
+            decision_groups.append((current_heading, current_parts))
+            if content.strip():
+                current_parts["_prose"] = content
+
+    # If no decisions found but there's body content, create one from the whole body
+    if not decision_groups and body.strip():
+        fallback_name = fm.get("decision", path.stem.replace("-", " ").replace("_", " ").title())
+        decision_groups.append((fallback_name, {"_prose": body}))
+
+    # Convert grouped parts into Decision objects
+    for heading, parts in decision_groups:
+        context = parts.get("Context", "")
+        resolution = parts.get("Resolution", "")
+        rationale_raw = parts.get("Rationale", "")
+        affects_raw = parts.get("Affects", "")
+        evidence_raw = parts.get("Evidence", "")
+
+        # If there's raw prose without sub-sections, try to use it as context
+        prose = parts.get("_prose", "")
+        preamble = parts.get("_preamble", "")
+        if prose and not context:
+            context = prose
+        if preamble and not context:
+            context = preamble
+
+        # Extract claims from rationale
+        rationale_prose, rationale_claims = _extract_claims(rationale_raw) if rationale_raw else ("", [])
+
+        # Parse affects as list items (- prefixed lines)
+        affects = _parse_ref_lines(affects_raw) if affects_raw else []
+
+        # Parse evidence as list items
+        evidence = _parse_ref_lines(evidence_raw) if evidence_raw else []
+
+        df.decisions.append(Decision(
+            heading=heading,
+            context=context.strip(),
+            resolution=resolution.strip(),
+            rationale=rationale_prose.strip(),
+            rationale_claims=rationale_claims,
+            affects=affects,
+            evidence=evidence,
+        ))
+
+    return df
+
+
+def _parse_ref_lines(text: str) -> list[str]:
+    """Parse list items or bare lines as references."""
+    refs: list[str] = []
+    for line in text.split("\n"):
+        stripped = line.strip()
+        if stripped.startswith("- "):
+            refs.append(stripped[2:].strip())
+        elif stripped and not stripped.startswith("#"):
+            refs.append(stripped)
+    return refs

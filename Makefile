@@ -2,15 +2,16 @@ PYTHON ?= python3
 PYTEST ?= $(PYTHON) -m pytest
 PYTHONPATH ?= src
 
-TARGETS := neo4j json jsonld agent embeddings mermaid palantir
+TARGETS := neo4j json jsonld agent embeddings mermaid palantir tools agents.md metrics
 
-.PHONY: help install test test-fast conformance validate-examples curate-examples compile-matrix smoke launch-check build dist-check clean
+.PHONY: help install test test-fast test-stress conformance validate-examples curate-examples compile-matrix smoke launch-check build dist-check clean
 
 help:
 	@echo "Lorelang shortcuts:"
 	@echo "  make install            # pip install -e ."
 	@echo "  make test               # full test suite"
 	@echo "  make test-fast          # fast local checks"
+	@echo "  make test-stress        # stress/performance tests only"
 	@echo "  make conformance        # language conformance checks"
 	@echo "  make validate-examples  # validate every example ontology"
 	@echo "  make curate-examples    # curation dry-run on all examples"
@@ -28,6 +29,9 @@ test:
 
 test-fast:
 	PYTHONPATH=$(PYTHONPATH) $(PYTEST) -q tests/test_language_conformance.py tests/test_ingest_review.py
+
+test-stress:
+	PYTHONPATH=$(PYTHONPATH) $(PYTEST) -v tests/test_stress.py
 
 conformance:
 	PYTHONPATH=$(PYTHONPATH) $(PYTEST) -q tests/test_language_conformance.py

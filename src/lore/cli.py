@@ -22,6 +22,7 @@ from .plugins import (
 
 BUILTIN_COMPILE_TARGETS = {
     "neo4j", "json", "jsonld", "agent", "embeddings", "mermaid", "palantir",
+    "tools", "agents.md", "metrics",
 }
 
 BUILTIN_CURATION_JOBS = {"staleness", "coverage", "consistency", "index", "summarize", "all"}
@@ -125,6 +126,8 @@ def main():
     )
     p_compile.add_argument("-o", "--output", help="Output file (default: stdout)")
     p_compile.add_argument("--view", help="Scope to a specific view (agent target only)")
+    p_compile.add_argument("--budget", type=int, default=None,
+                           help="Token budget for agent target (enables projection)")
 
     # stats
     p_stats = subparsers.add_parser("stats", help="Show ontology statistics")
@@ -149,6 +152,13 @@ def main():
     )
     p_curate.add_argument("--dry-run", action="store_true",
                           help="Report only, don't generate proposal files")
+
+    # diff
+    p_diff = subparsers.add_parser("diff", help="Compare two ontology directories")
+    p_diff.add_argument("dir1", help="First (baseline) ontology directory")
+    p_diff.add_argument("dir2", help="Second (current) ontology directory")
+    p_diff.add_argument("--json", action="store_true", dest="diff_json",
+                        help="Output as JSON")
 
     # index
     p_index = subparsers.add_parser("index", help="Generate INDEX.lore routing files")
@@ -214,7 +224,8 @@ def main():
     elif args.command == "validate":
         cmd_validate(args.dir)
     elif args.command == "compile":
-        cmd_compile(args.dir, args.target, args.output, getattr(args, 'view', None))
+        cmd_compile(args.dir, args.target, args.output, getattr(args, 'view', None),
+                    getattr(args, 'budget', None))
     elif args.command == "stats":
         cmd_stats(args.dir)
     elif args.command == "viz":
@@ -223,6 +234,8 @@ def main():
         cmd_evolve(args.dir, getattr(args, 'output', None))
     elif args.command == "curate":
         cmd_curate(args.dir, args.job, getattr(args, 'dry_run', False))
+    elif args.command == "diff":
+        cmd_diff(args.dir1, args.dir2, getattr(args, 'diff_json', False))
     elif args.command == "index":
         cmd_index(args.dir)
 
@@ -255,7 +268,7 @@ def cmd_init(directory: str, name: str | None, domain: str):
 
     # Core directories
     for d in ["entities", "relationships", "rules", "taxonomies",
-              "glossary", "views", "observations", "outcomes"]:
+              "glossary", "views", "observations", "outcomes", "decisions"]:
         (root / d).mkdir(exist_ok=True)
 
     # Starter entity
@@ -292,7 +305,8 @@ def cmd_init(directory: str, name: str | None, domain: str):
     print(f"  ├── glossary/")
     print(f"  ├── views/")
     print(f"  ├── observations/")
-    print(f"  └── outcomes/")
+    print(f"  ├── outcomes/")
+    print(f"  └── decisions/")
     print(f"\n  Next steps:")
     print(f"    1. Edit entities/example.lore or add new entities")
     print(f"    2. lore validate {root}")
@@ -372,7 +386,7 @@ def cmd_setup(
     (root / "lore.yaml").write_text(manifest)
 
     for d in ["entities", "relationships", "rules", "taxonomies",
-              "glossary", "views", "observations", "outcomes"]:
+              "glossary", "views", "observations", "outcomes", "decisions"]:
         (root / d).mkdir(exist_ok=True)
 
     (root / "entities" / "domain_object.lore").write_text(
@@ -569,7 +583,7 @@ def cmd_setup(
 
     print(f"\n  Domain setup '{ont_name}' created at {root}/\n")
     print(f"  Included AI-first starter files for:")
-    print(f"    entities, relationships, rules, taxonomies, glossary, views, observations, outcomes")
+    print(f"    entities, relationships, rules, taxonomies, glossary, views, observations, outcomes, decisions")
     print(f"\n  Next steps:")
     print(f"    1. lore validate {root}")
     print(f"    2. lore index {root}")
@@ -749,7 +763,8 @@ def cmd_validate(directory: str):
         sys.exit(1)
 
 
-def cmd_compile(directory: str, target: str, output: str | None, view: str | None):
+def cmd_compile(directory: str, target: str, output: str | None, view: str | None,
+                budget: int | None = None):
     """Compile ontology to target format."""
     ontology = parse_ontology(directory)
     target = target.strip()
@@ -765,7 +780,8 @@ def cmd_compile(directory: str, target: str, output: str | None, view: str | Non
         result = compile_jsonld(ontology)
     elif target == "agent":
         from .compilers.agent import compile_agent_context
-        result = compile_agent_context(ontology, view_name=view)
+        result = compile_agent_context(ontology, view_name=view,
+                                       budget_tokens=budget)
     elif target == "embeddings":
         from .compilers.embeddings import compile_embeddings
         result = compile_embeddings(ontology)
@@ -775,6 +791,15 @@ def cmd_compile(directory: str, target: str, output: str | None, view: str | Non
     elif target == "palantir":
         from .compilers.palantir import compile_palantir
         result = compile_palantir(ontology)
+    elif target == "tools":
+        from .compilers.tools import compile_tools
+        result = compile_tools(ontology)
+    elif target == "agents.md":
+        from .compilers.agents_md import compile_agents_md
+        result = compile_agents_md(ontology, view_name=view)
+    elif target == "metrics":
+        from .compilers.metrics import compile_metrics
+        result = compile_metrics(ontology)
     else:
         try:
             compile_fn = resolve_compiler(ontology, target)
@@ -918,6 +943,17 @@ def cmd_evolve(directory: str, output: str | None):
         print()
 
     print(f"  {len(proposals)} proposal(s) generated. Review in {output_dir}/\n")
+
+
+def cmd_diff(dir1: str, dir2: str, as_json: bool):
+    """Compare two ontology directories."""
+    from .diff import diff_paths
+
+    result = diff_paths(dir1, dir2)
+    if as_json:
+        print(result.to_json())
+    else:
+        print(result.to_text())
 
 
 def cmd_index(directory: str):

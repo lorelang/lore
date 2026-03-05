@@ -25,7 +25,7 @@ def tmp_ontology(tmp_path):
     """Create a minimal ontology directory for testing."""
     def _make(manifest=None, entities=None, relationships=None,
               rules=None, taxonomies=None, glossary=None, views=None,
-              observations=None, outcomes=None):
+              observations=None, outcomes=None, decisions=None):
         if manifest:
             (tmp_path / "lore.yaml").write_text(manifest)
         if entities:
@@ -60,5 +60,9 @@ def tmp_ontology(tmp_path):
             (tmp_path / "outcomes").mkdir(exist_ok=True)
             for name, content in outcomes.items():
                 (tmp_path / "outcomes" / name).write_text(content)
+        if decisions:
+            (tmp_path / "decisions").mkdir(exist_ok=True)
+            for name, content in decisions.items():
+                (tmp_path / "decisions" / name).write_text(content)
         return parse_ontology(tmp_path)
     return _make
