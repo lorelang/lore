@@ -1,0 +1,15 @@
+{
+  "name": "lorelang",
+  "owner": {
+    "name": "lorelang",
+    "avatar": "https://github.com/lorelang.png"
+  },
+  "plugins": [
+    {
+      "name": "lorelang",
+      "source": "../skills/lorelang",
+      "description": "Create, manage, validate, and compile Lore ontologies -- human-readable domain knowledge for the AI age.",
+      "version": "0.2.1"
+    }
+  ]
+}

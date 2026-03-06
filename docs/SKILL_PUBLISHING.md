@@ -2,30 +2,37 @@
 
 This document covers how to publish the Lore ontology skill to the various AI agent skill marketplaces.
 
-## Skill Package Location
+## Package Layout
 
 ```
+.claude-plugin/
+  plugin.json               # Claude Code plugin manifest (repo-level)
+  marketplace.json           # Claude Code marketplace index
+
 skills/
   lorelang/
-    SKILL.md                # Main skill file (Agent Skills + OpenClaw metadata)
-    plugin.json             # Plugin manifest
+    SKILL.md                 # Main skill file (Agent Skills + OpenClaw metadata)
+    plugin.json              # ClawHub package manifest (skill-level)
     references/
-      CLI.md                # CLI reference
-      FORMAT.md             # File format reference
-      WORKFLOWS.md          # Workflow guides
-  marketplace.json          # Marketplace distribution manifest
-```
+      CLI.md                 # CLI reference
+      FORMAT.md              # File format reference
+      WORKFLOWS.md           # Workflow guides
 
-The same skill is also available at `.claude/skills/lorelang/` for project-level use.
+.claude/skills/lorelang/     # Project-level Claude Code skill (copy)
+  SKILL.md
+  references/
+```
 
 ## Pre-Publishing Checklist
 
 - [ ] All tests pass: `make launch-check`
 - [ ] SKILL.md frontmatter has correct version matching `pyproject.toml`
-- [ ] `plugin.json` version matches
+- [ ] `.claude-plugin/plugin.json` version matches
+- [ ] `skills/lorelang/plugin.json` version matches
 - [ ] `lore-ontology` package is published on PyPI
 - [ ] All CLI commands referenced in the skill work correctly
 - [ ] Reference files are up to date with current CLI
+- [ ] `.claude/skills/lorelang/` is in sync with `skills/lorelang/`
 
 ## Publishing to ClawHub (OpenClaw)
 
@@ -132,7 +139,7 @@ python3 -m twine upload dist/*
 The SKILL.md uses the Agent Skills open standard (agentskills.io/specification):
 
 - **name**: Lowercase, hyphens only, max 64 chars
-- **description**: What the skill does AND when to use it (critical for discovery)
+- **description**: What the skill does AND when to use it (critical for discovery). Include NOT clause for exclusions.
 - **metadata**: Includes both standard fields and OpenClaw-specific requirements
 - **OpenClaw metadata**: Single-line JSON under `metadata.openclaw` with binary requirements, OS support, and install instructions
 - **allowed-tools**: Pre-approved tools for the skill
@@ -142,3 +149,22 @@ The skill body follows progressive disclosure:
 - references/CLI.md: Complete CLI documentation
 - references/FORMAT.md: Complete file format reference
 - references/WORKFLOWS.md: Step-by-step workflows
+
+## Manifest Locations
+
+There are two `plugin.json` files and two `SKILL.md` copies. This is intentional -- each marketplace has its own manifest convention, and the repo must satisfy all of them.
+
+| File | Location | Marketplace | Purpose |
+|------|----------|-------------|---------|
+| `plugin.json` | `.claude-plugin/` | Claude Code | Repo-level plugin manifest. Claude Code reads this when a user runs `/plugin marketplace add` or `claude --plugin-dir`. Points to `skills/` so Claude Code can discover the skill. |
+| `marketplace.json` | `.claude-plugin/` | Claude Code | Marketplace index. Lists all plugins in this repo for the `/plugin install` discovery flow. |
+| `plugin.json` | `skills/lorelang/` | ClawHub (OpenClaw) | Skill-level package manifest. `clawhub publish skills/lorelang` reads this file to get the name, version, keywords, and `skillsPath` for the OpenClaw registry. |
+| `SKILL.md` | `skills/lorelang/` | All | The skill itself, following the Agent Skills open standard. Read by ClawHub, skills.sh, and Claude Code. The `metadata.openclaw` field in the frontmatter carries OpenClaw-specific install requirements. |
+| `SKILL.md` | `.claude/skills/lorelang/` | Claude Code (project) | Copy of the skill for project-level use when working inside this repo. Must be kept in sync with `skills/lorelang/SKILL.md`. |
+
+### Why two plugin.json?
+
+- **Claude Code** looks for `.claude-plugin/plugin.json` at the repo root. It uses this to register the repo as a plugin and find the `skills/` directory.
+- **ClawHub/OpenClaw** looks for `plugin.json` inside the skill directory being published (`skills/lorelang/`). It uses this for registry metadata like version, namespace, and keywords.
+
+Different ecosystems, different conventions. Both are required if you want to publish to both marketplaces. If you only target one marketplace, you only need that marketplace's manifest.
