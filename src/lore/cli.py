@@ -171,6 +171,41 @@ def main():
     p_index = subparsers.add_parser("index", help="Generate INDEX.lore routing files")
     p_index.add_argument("dir", help="Ontology directory")
 
+    # add
+    p_add = subparsers.add_parser("add", help="Scaffold a new .lore file")
+    add_sub = p_add.add_subparsers(dest="add_type", help="Type of file to scaffold")
+
+    for add_type in ["entity", "relationship", "rule", "taxonomy",
+                      "glossary", "view", "observation", "outcome", "decision"]:
+        p_at = add_sub.add_parser(add_type, help=f"Scaffold a new {add_type} file")
+        p_at.add_argument("dir", help="Ontology directory")
+        p_at.add_argument("name", help=f"{add_type.title()} name")
+        p_at.add_argument("--description", default="", help="Description")
+        p_at.add_argument("--status", default="draft",
+                          choices=["draft", "proposed", "stable", "deprecated"],
+                          help="Initial status (default: draft)")
+        if add_type == "entity":
+            p_at.add_argument("--inherits", help="Parent entity name")
+        if add_type == "relationship":
+            p_at.add_argument("--from-entity", required=True, dest="from_entity",
+                              help="Source entity")
+            p_at.add_argument("--to-entity", required=True, dest="to_entity",
+                              help="Target entity")
+            p_at.add_argument("--cardinality", default="one-to-many",
+                              choices=["one-to-one", "one-to-many",
+                                       "many-to-one", "many-to-many"],
+                              help="Cardinality (default: one-to-many)")
+        if add_type == "observation":
+            p_at.add_argument("--about", required=True, help="Entity this observes")
+            p_at.add_argument("--observed-by", default="agent",
+                              help="Observer identity")
+        if add_type == "rule":
+            p_at.add_argument("--applies-to", dest="applies_to",
+                              help="Entity this rule applies to")
+            p_at.add_argument("--severity", default="info",
+                              choices=["critical", "warning", "info"],
+                              help="Rule severity (default: info)")
+
     # version
     subparsers.add_parser("version", help="Show version information")
 
@@ -278,6 +313,11 @@ def main():
         cmd_diff(args.dir1, args.dir2, getattr(args, 'diff_json', False))
     elif args.command == "index":
         cmd_index(args.dir)
+    elif args.command == "add":
+        if not args.add_type:
+            p_add.print_help()
+            sys.exit(1)
+        cmd_add(args)
     elif args.command == "version":
         cmd_version()
     elif args.command == "list":
@@ -1192,6 +1232,204 @@ def cmd_curate(directory: str, job: str, dry_run: bool, as_json: bool = False):
     else:
         print(f"  {total_warnings} warning{'s' if total_warnings != 1 else ''}, "
               f"{total_infos} suggestion{'s' if total_infos != 1 else ''}\n")
+
+
+def cmd_add(args):
+    """Scaffold a new .lore file in the right directory."""
+    root = Path(args.dir)
+    today = date.today().isoformat()
+    add_type = args.add_type
+    name = args.name
+    desc = getattr(args, "description", "") or f"A {add_type} in this domain."
+    status = getattr(args, "status", "draft")
+    slug = re.sub(r"[^a-z0-9]+", "_", name.lower()).strip("_")
+
+    # Map type to directory
+    dir_map = {
+        "entity": "entities", "relationship": "relationships",
+        "rule": "rules", "taxonomy": "taxonomies",
+        "glossary": "glossary", "view": "views",
+        "observation": "observations", "outcome": "outcomes",
+        "decision": "decisions",
+    }
+    target_dir = root / dir_map[add_type]
+    target_file = target_dir / f"{slug}.lore"
+
+    if not root.is_dir():
+        print(f"  Ontology directory not found: {root}")
+        sys.exit(1)
+
+    if target_file.exists():
+        print(f"  File already exists: {target_file}")
+        print(f"  To modify it, edit the file directly and run: lore validate {root}")
+        sys.exit(1)
+
+    target_dir.mkdir(exist_ok=True)
+
+    if add_type == "entity":
+        inherits_line = f"inherits: {args.inherits}\n" if getattr(args, "inherits", None) else ""
+        content = (
+            f"---\n"
+            f"entity: {name}\n"
+            f"description: {desc}\n"
+            f"{inherits_line}"
+            f"status: {status}\n"
+            f"provenance:\n"
+            f"  author: agent\n"
+            f"  source: ai-generated\n"
+            f"  confidence: 0.7\n"
+            f"  created: {today}\n"
+            f"---\n\n"
+            f"## Attributes\n\n"
+            f"name: string [required]\n"
+            f"  | Display name.\n\n"
+            f"## Identity\n\n"
+            f"How is a {name} uniquely identified?\n\n"
+            f"## Notes\n\n"
+            f"Add domain knowledge, edge cases, and reasoning guidance.\n"
+        )
+
+    elif add_type == "relationship":
+        from_e = args.from_entity
+        to_e = args.to_entity
+        card = getattr(args, "cardinality", "one-to-many")
+        content = (
+            f"---\n"
+            f"domain: {name}\n"
+            f"description: {desc}\n"
+            f"status: {status}\n"
+            f"---\n\n"
+            f"## {slug.upper()}\n"
+            f"  from: {from_e} -> to: {to_e}\n"
+            f"  cardinality: {card}\n"
+            f"  | {desc}\n"
+        )
+
+    elif add_type == "rule":
+        applies_to = getattr(args, "applies_to", None) or "EntityName"
+        severity = getattr(args, "severity", "info")
+        content = (
+            f"---\n"
+            f"domain: {name}\n"
+            f"description: {desc}\n"
+            f"status: {status}\n"
+            f"---\n\n"
+            f"## {slug}\n"
+            f"  applies_to: {applies_to}\n"
+            f"  severity: {severity}\n"
+            f"  trigger: Describe when this fires\n\n"
+            f"  condition:\n"
+            f"    Describe the condition\n\n"
+            f"  action:\n"
+            f"    Describe the action\n\n"
+            f"  Add reasoning and context here.\n"
+        )
+
+    elif add_type == "taxonomy":
+        content = (
+            f"---\n"
+            f"taxonomy: {name}\n"
+            f"description: {desc}\n"
+            f"status: {status}\n"
+            f"---\n\n"
+            f"{name}\n"
+            f"+-- Category A             @tag: tag-a\n"
+            f"+-- Category B             @tag: tag-b\n"
+        )
+
+    elif add_type == "glossary":
+        content = (
+            f"---\n"
+            f"description: {desc}\n"
+            f"status: {status}\n"
+            f"---\n\n"
+            f"## {name}\n\n"
+            f"Define this term here.\n"
+        )
+
+    elif add_type == "view":
+        content = (
+            f"---\n"
+            f"view: {name}\n"
+            f"audience: Who this view is for\n"
+            f"description: {desc}\n"
+            f"status: {status}\n"
+            f"---\n\n"
+            f"## Entities\n"
+            f"- EntityName (all)\n\n"
+            f"## Relationships\n"
+            f"- RELATIONSHIP_NAME\n\n"
+            f"## Key Questions\n"
+            f"- What should this audience focus on?\n"
+        )
+
+    elif add_type == "observation":
+        about = args.about
+        observed_by = getattr(args, "observed_by", "agent")
+        content = (
+            f"---\n"
+            f"observations: {name}\n"
+            f"about: {about}\n"
+            f"observed_by: {observed_by}\n"
+            f"date: {today}\n"
+            f"confidence: 0.7\n"
+            f"status: {status}\n"
+            f"provenance:\n"
+            f"  author: {observed_by}\n"
+            f"  source: ai-generated\n"
+            f"  confidence: 0.7\n"
+            f"  created: {today}\n"
+            f"---\n\n"
+            f"## {name}\n\n"
+            f"Describe what was observed.\n\n"
+            f"Fact: A verifiable statement.\n"
+            f"Belief: An interpretation.\n"
+        )
+
+    elif add_type == "outcome":
+        content = (
+            f"---\n"
+            f"outcomes: {name}\n"
+            f"reviewed_by: agent\n"
+            f"date: {today}\n"
+            f"status: {status}\n"
+            f"provenance:\n"
+            f"  author: agent\n"
+            f"  source: ai-generated\n"
+            f"  confidence: 0.8\n"
+            f"  created: {today}\n"
+            f"---\n\n"
+            f"## {name}\n\n"
+            f"Describe the outcome.\n\n"
+            f"Takeaway: a lesson to feed back into the ontology\n"
+        )
+
+    elif add_type == "decision":
+        content = (
+            f"---\n"
+            f"decisions: {name}\n"
+            f"decided_by: agent\n"
+            f"decided_date: {today}\n"
+            f"status: {status}\n"
+            f"provenance:\n"
+            f"  author: agent\n"
+            f"  source: ai-generated\n"
+            f"  confidence: 0.85\n"
+            f"  created: {today}\n"
+            f"---\n\n"
+            f"## {name}\n\n"
+            f"Context: What prompted this decision.\n"
+            f"Resolution: What was decided.\n"
+            f"Rationale: Why.\n"
+        )
+
+    else:
+        print(f"  Unknown type: {add_type}")
+        sys.exit(1)
+
+    target_file.write_text(content)
+    print(f"  Created: {target_file}")
+    print(f"  Next: edit the file, then run: lore validate {root}")
 
 
 def cmd_version():

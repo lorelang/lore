@@ -139,6 +139,7 @@ For complete format reference: see [FORMAT.md](references/FORMAT.md)
 | `lore version` | Show version |
 | `lore init <dir>` | Scaffold minimal ontology |
 | `lore setup <dir>` | AI-first domain bootstrap |
+| `lore add <type> <dir> <name>` | Scaffold a new .lore file |
 | `lore validate <dir> [--json]` | Validate syntax and semantics |
 | `lore compile <dir> -t <target> [-o file]` | Compile to target format |
 | `lore list <dir> [--type T] [--json]` | List ontology contents |
@@ -163,7 +164,8 @@ For complete CLI reference: see [CLI.md](references/CLI.md)
 An AI agent can fully manage a Lore ontology using only the filesystem and CLI:
 
 1. **Bootstrap**: Run `lore setup` to create the ontology structure
-2. **Author entities**: Write `.lore` files in `entities/` using the format above
+2. **Scaffold files**: Run `lore add entity <dir> "Name"` to create correctly-formatted files
+3. **Author entities**: Edit the scaffolded files or write `.lore` files directly
 3. **Define relationships**: Write `.lore` files in `relationships/`
 4. **Add rules**: Write `.lore` files in `rules/`
 5. **Validate continuously**: Run `lore validate <dir> --json` after each change

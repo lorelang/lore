@@ -43,6 +43,36 @@ Creates: Full starter ontology with entity, relationship, rules, taxonomy, gloss
 
 Aliases: `/setup`, `lore:setup`, `/lore:setup`
 
+## lore add
+
+Scaffold a new `.lore` file with correct frontmatter in the right directory.
+
+```bash
+lore add <type> <dir> <name> [--description DESC] [--status STATUS]
+```
+
+Types: `entity`, `relationship`, `rule`, `taxonomy`, `glossary`, `view`, `observation`, `outcome`, `decision`
+
+Type-specific options:
+
+```bash
+# Entity with inheritance
+lore add entity my-domain/ "Premium Account" --inherits Account
+
+# Relationship
+lore add relationship my-domain/ "Account Contacts" \
+  --from-entity Account --to-entity Contact --cardinality one-to-many
+
+# Rule
+lore add rule my-domain/ "Churn Alert" \
+  --applies-to Account --severity critical
+
+# Observation
+lore add observation my-domain/ "Q1 Discovery" --about Account
+```
+
+Creates a file with correct frontmatter, provenance, and placeholder sections. Exit code 1 if file already exists (prints path to edit instead).
+
 ## lore validate
 
 Check syntax and semantics.
