@@ -1,0 +1,19 @@
+{
+  "name": "lorelang",
+  "namespace": "lorelang",
+  "version": "0.2.1",
+  "description": "Agent skill for creating, managing, validating, and compiling Lore ontologies -- human-readable domain knowledge for the AI age.",
+  "author": "lorelang",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/lorelang/lore",
+  "repository": "https://github.com/lorelang/lore",
+  "skillsPath": ".",
+  "keywords": [
+    "ontology",
+    "domain-modeling",
+    "knowledge-graph",
+    "ai-first",
+    "lore",
+    "knowledge-engineering"
+  ]
+}
