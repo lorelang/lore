@@ -1,0 +1,21 @@
+{
+  "name": "lorelang",
+  "version": "0.2.1",
+  "description": "Create, manage, validate, and compile Lore ontologies -- human-readable domain knowledge for the AI age.",
+  "author": {
+    "name": "lorelang",
+    "url": "https://github.com/lorelang"
+  },
+  "homepage": "https://github.com/lorelang/lore",
+  "repository": "https://github.com/lorelang/lore",
+  "license": "Apache-2.0",
+  "keywords": [
+    "ontology",
+    "domain-modeling",
+    "knowledge-graph",
+    "ai-first",
+    "lore",
+    "knowledge-engineering"
+  ],
+  "skills": "../skills/"
+}
