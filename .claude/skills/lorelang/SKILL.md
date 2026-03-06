@@ -1,6 +1,6 @@
 ---
 name: lorelang
-description: Create, manage, validate, and compile Lore ontologies -- human-readable domain knowledge files for the AI age. Use when working with .lore files, ontology directories, domain modeling, knowledge graphs, knowledge engineering, or when the user mentions Lore, lorelang, ontology, or domain knowledge.
+description: Create, manage, validate, and compile Lore ontologies -- human-readable domain knowledge files for the AI age. Activate on .lore files, ontology directories, domain modeling, knowledge graphs, knowledge engineering, lore.yaml, or when the user mentions Lore, lorelang, ontology, or domain knowledge. NOT for general file editing, non-ontology YAML, or database schema design.
 license: Apache-2.0
 compatibility: Requires Python 3.10+ and lore-ontology package (pip install lore-ontology). Works on macOS and Linux.
 metadata: {"author": "lorelang", "version": "0.2.1", "tags": ["ontology", "domain-modeling", "knowledge-graph", "ai-first", "lore", "knowledge-engineering"], "repository": "https://github.com/lorelang/lore", "openclaw": {"requires": {"bins": ["python3", "lore"]}, "homepage": "https://github.com/lorelang/lore", "os": ["darwin", "linux"], "install": [{"kind": "uv", "package": "lore-ontology"}], "emoji": "\ud83c\udfdb\ufe0f"}}
@@ -9,7 +9,22 @@ allowed-tools: Read Write Edit Bash Glob Grep
 
 # Lore: Human-Readable Ontology Format
 
-Lore encodes domain knowledge in prose-first `.lore` files that both humans and AI agents can author, review, and reason over. A single ontology compiles to knowledge graphs, agent prompts, embeddings, JSON schemas, and more.
+Work with Lore ontologies -- prose-first `.lore` files that encode domain knowledge for humans and machines. A single ontology compiles to knowledge graphs, agent prompts, embeddings, JSON schemas, and more.
+
+## When to Use
+
+**Use for:**
+- Bootstrapping new domain ontologies (`lore setup`)
+- Authoring and editing `.lore` files (entities, relationships, rules, taxonomies, glossary, views, observations, outcomes, decisions)
+- Validating ontology syntax and semantics
+- Compiling ontologies to target formats (agent context, JSON, Neo4j, embeddings, Mermaid, tools)
+- Running health checks, evolving ontologies from outcomes, reviewing proposals
+- Any task involving `lore.yaml`, `.lore` files, or ontology directories
+
+**NOT for:**
+- General YAML/Markdown editing unrelated to Lore
+- Database schema design (use Lore only for domain knowledge modeling)
+- Writing application code that consumes compiled output
 
 ## Install
 
@@ -17,23 +32,71 @@ Lore encodes domain knowledge in prose-first `.lore` files that both humans and 
 pip install lore-ontology
 ```
 
-## Quick Start
+Verify: `lore version`
+
+## Core Workflow
+
+Follow this sequence when working with Lore ontologies. All commands auto-detect the ontology directory from CWD by walking up to find `lore.yaml`.
+
+### 1. Bootstrap
 
 ```bash
-# Bootstrap a new domain ontology
 lore setup my-domain --domain "Customer Success Operations"
+cd my-domain
+```
 
-# Validate
-lore validate my-domain/
+### 2. Scaffold and Author
 
-# Compile to AI agent context
-lore compile my-domain/ -t agent
+```bash
+# Scaffold files with correct frontmatter
+lore add entity "Account" --description "A company that is a customer or prospect."
+lore add relationship "Account Contacts" --from-entity Account --to-entity Contact --cardinality one-to-many
+lore add rule "Churn Alert" --applies-to Account --severity critical
 
-# List everything in the ontology
-lore list my-domain/
+# Then edit the scaffolded .lore files to add attributes, conditions, and prose
+```
 
-# Search across ontology
-lore search my-domain/ "churn risk"
+### 3. Validate After Every Change
+
+```bash
+lore validate          # human-readable output
+lore validate --json   # machine-readable, parse for errors/warnings
+```
+
+Always validate after editing `.lore` files. Parse `--json` output to detect and fix errors programmatically.
+
+### 4. Compile
+
+```bash
+lore compile -t agent                          # AI agent system prompt
+lore compile -t agent --view "Account Exec" --budget 4000  # scoped + projected
+lore compile -t json -o ontology.json          # JSON for APIs
+lore compile -t neo4j -o schema.cypher         # graph database
+lore compile -t embeddings -o chunks.jsonl     # vector store chunks
+lore compile -t mermaid -o diagram.mmd         # visual diagram
+lore compile -t tools -o tools.json            # function-calling schemas
+```
+
+Targets: `agent`, `json`, `jsonld`, `neo4j`, `embeddings`, `mermaid`, `palantir`, `tools`, `agents.md`, `metrics`
+
+### 5. Query and Explore
+
+```bash
+lore list                          # everything in the ontology
+lore list --type entities --json   # filtered, machine-readable
+lore show Account --json           # entity details
+lore search "churn risk" --json    # full-text search
+lore stats --json                  # ontology statistics
+lore viz                           # ASCII entity graph
+```
+
+### 6. Curate and Evolve
+
+```bash
+lore curate --json                 # run all health checks
+lore curate --job staleness        # specific check
+lore evolve                        # generate proposals from outcome takeaways
+lore review proposals/ --decision accept --reviewer agent
 ```
 
 ## Ontology Structure
@@ -51,16 +114,6 @@ ontology/
   outcomes/              # retrospectives with takeaways
   decisions/             # operational decisions
 ```
-
-## Core Workflow for AI Agents
-
-1. **Setup**: `lore setup <dir> --domain "<description>"` -- creates full starter ontology
-2. **Author**: Write `.lore` files directly in entities/, relationships/, rules/, etc.
-3. **Validate**: `lore validate <dir>` -- check for errors (use `--json` for machine output)
-4. **Compile**: `lore compile <dir> -t <target>` -- compile to any target format
-5. **Curate**: `lore curate <dir>` -- run health checks (staleness, coverage, consistency)
-6. **Evolve**: `lore evolve <dir>` -- generate improvement proposals from outcomes
-7. **Review**: `lore review <path> --decision accept --reviewer <id>` -- accept/reject proposals
 
 ## File Format Quick Reference
 
@@ -130,51 +183,50 @@ description: Rules for detecting risk signals.
     Notify csm_owner
 ```
 
-For complete format reference: see [FORMAT.md](references/FORMAT.md)
+For complete format reference, read `references/FORMAT.md`.
 
-## CLI Commands
+## CLI Quick Reference
 
-Most commands auto-detect the ontology directory by walking up from CWD looking for `lore.yaml`. You only need to pass a directory when creating (`init`, `setup`) or comparing (`diff`).
+Most commands auto-detect the ontology from CWD. Only `setup`, `init`, and `diff` require explicit directory arguments.
 
 | Command | Purpose |
 |---------|---------|
 | `lore version` | Show version |
-| `lore init <dir>` | Scaffold minimal ontology |
-| `lore setup <dir>` | AI-first domain bootstrap |
-| `lore add <type> <name>` | Scaffold a new .lore file |
-| `lore validate [--json]` | Validate syntax and semantics |
-| `lore compile -t <target> [-o file]` | Compile to target format |
+| `lore setup <dir>` | Bootstrap new ontology |
+| `lore add <type> <name>` | Scaffold a .lore file |
+| `lore validate [--json]` | Check syntax and semantics |
+| `lore compile -t <target>` | Compile to target format |
 | `lore list [--type T] [--json]` | List ontology contents |
 | `lore show <name> [--json]` | Show item details |
 | `lore search <query> [--json]` | Full-text search |
-| `lore stats [--json]` | Show statistics |
+| `lore stats [--json]` | Ontology statistics |
 | `lore viz` | ASCII entity graph |
 | `lore curate [--json]` | Run health checks |
 | `lore evolve` | Generate proposals from outcomes |
+| `lore review <path>` | Accept or reject proposals |
+| `lore diff <dir1> <dir2>` | Compare two ontologies |
+| `lore index` | Generate routing indexes |
 | `lore ingest transcript` | Ingest meeting transcripts |
 | `lore ingest memory` | Ingest memory exports |
-| `lore review <path>` | Review proposals |
-| `lore diff <dir1> <dir2>` | Compare ontologies |
-| `lore index` | Generate routing indexes |
 
-Compilation targets: `agent`, `json`, `jsonld`, `neo4j`, `embeddings`, `mermaid`, `palantir`, `tools`, `agents.md`, `metrics`
+All commands return exit code 0 on success, 1 on error. Commands with `--json` output valid JSON to stdout.
 
-For complete CLI reference: see [CLI.md](references/CLI.md)
+For complete CLI reference, read `references/CLI.md`.
 
-## AI Agent Autonomous Workflow
+## Key Conventions
 
-An AI agent can fully manage a Lore ontology using only the filesystem and CLI:
+- **Directory auto-detection**: Run commands from inside the ontology directory (or any subdirectory). The CLI walks up looking for `lore.yaml`.
+- **File types**: `entity`, `relationship`, `rule`, `taxonomy`, `glossary`, `view`, `observation`, `outcome`, `decision`
+- **Status lifecycle**: `draft` -> `proposed` -> `stable` -> `deprecated`
+- **Validation-first**: Always run `lore validate` after modifying `.lore` files.
+- **Machine output**: Use `--json` on `validate`, `list`, `show`, `search`, `stats`, `curate` for structured output.
 
-1. **Bootstrap**: `lore setup my-domain --domain "Target Domain"`
-2. **Scaffold files**: `lore add entity "Account"` (from inside the ontology dir)
-3. **Author**: Edit the scaffolded files or write `.lore` files directly
-4. **Define relationships**: `lore add relationship "Links" --from-entity A --to-entity B`
-5. **Validate continuously**: `lore validate --json` after each change
-6. **Compile for use**: `lore compile -t agent` to get agent-ready context
-7. **Monitor health**: `lore curate --json` to detect staleness and gaps
-8. **Learn from outcomes**: Write outcomes with `Takeaway:` markers, then `lore evolve`
-9. **Review proposals**: `lore review proposals/ --decision accept --reviewer agent`
+## References
 
-All commands return exit codes (0 = success, 1 = error) and support `--json` for machine-readable output where applicable.
+Consult these for detailed documentation -- they are not loaded automatically:
 
-For detailed workflows: see [WORKFLOWS.md](references/WORKFLOWS.md)
+| File | Consult When |
+|------|-------------|
+| `references/CLI.md` | Looking up exact command syntax, flags, or options |
+| `references/FORMAT.md` | Writing or editing `.lore` files and need the full format specification |
+| `references/WORKFLOWS.md` | Following step-by-step guides for common operations (bootstrap, ingest, evolve, curate) |
