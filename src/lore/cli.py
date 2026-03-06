@@ -289,6 +289,18 @@ def main():
 
     # --- dispatch ---
 
+    try:
+        _dispatch(args, parser, subparsers)
+    except SystemExit:
+        raise
+    except KeyboardInterrupt:
+        sys.exit(130)
+    except Exception as exc:
+        print(f"  Error: {exc}")
+        sys.exit(1)
+
+
+def _dispatch(args, parser, subparsers):
     if args.command == "init":
         cmd_init(args.dir, getattr(args, 'name', None), getattr(args, 'domain', ''))
     elif args.command in {"setup", "/setup", "lore:setup", "/lore:setup"}:
@@ -333,8 +345,7 @@ def main():
                 max_sections=getattr(args, "max_sections", 12),
             )
         else:
-            p_ingest.print_help()
-            sys.exit(1)
+            parser.parse_args(["ingest", "--help"])
     elif args.command == "review":
         cmd_review(
             args.path,
@@ -361,7 +372,7 @@ def main():
         cmd_index(_resolve_dir(args.dir))
     elif args.command == "add":
         if not args.add_type:
-            p_add.print_help()
+            print("  Specify a type: lore add <entity|relationship|rule|taxonomy|glossary|view|observation|outcome|decision> <name>")
             sys.exit(1)
         args.dir = _resolve_dir(getattr(args, 'dir', None))
         cmd_add(args)
