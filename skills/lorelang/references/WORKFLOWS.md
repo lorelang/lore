@@ -8,23 +8,36 @@ Step-by-step workflows for common ontology operations. All workflows assume `lor
 # Create ontology with AI-first defaults
 lore setup customer-success --domain "Customer Success Operations"
 
+# cd into the ontology — all subsequent commands auto-detect
+cd customer-success
+
 # Validate the generated structure
-lore validate customer-success/
+lore validate
 
 # See what was created
-lore list customer-success/
+lore list
 
 # Compile to agent context to verify
-lore compile customer-success/ -t agent
+lore compile -t agent
 ```
 
 ## 2. Add an Entity
 
-Create a file in `entities/`:
+```bash
+# Scaffold a correctly-formatted entity file
+lore add entity "Account" --description "A company that is a customer or prospect."
+
+# Edit the scaffolded file to add attributes, identity, notes
+# (agent edits entities/account.lore directly)
+
+# Validate after editing
+lore validate
+```
+
+Or write the file directly:
 
 ```bash
-# Write entity file
-cat > ontology/entities/account.lore << 'EOF'
+cat > entities/account.lore << 'EOF'
 ---
 entity: Account
 description: A company that is a customer or prospect.
@@ -42,20 +55,20 @@ stage: enum [prospect, onboarding, active, at-risk, churned]
 ## Identity
 
 An account is identified by its primary web domain.
-
-## Notes
-
-Accounts are the primary unit for all revenue tracking.
 EOF
 
-# Validate
-lore validate ontology/
+lore validate
 ```
 
 ## 3. Add Relationships Between Entities
 
 ```bash
-cat > ontology/relationships/account_links.lore << 'EOF'
+# Scaffold with required flags
+lore add relationship "Account Contacts" \
+  --from-entity Account --to-entity Contact --cardinality one-to-many
+
+# Or write directly
+cat > relationships/account_links.lore << 'EOF'
 ---
 domain: Account Links
 description: How accounts connect to other entities.
@@ -71,46 +84,43 @@ description: How accounts connect to other entities.
   | Who are the contacts at this account?
 EOF
 
-lore validate ontology/
+lore validate
 ```
 
 ## 4. Compile for Different Targets
 
 ```bash
 # AI agent system prompt (most common)
-lore compile ontology/ -t agent -o context.txt
+lore compile -t agent -o context.txt
 
 # Scoped to a team's view
-lore compile ontology/ -t agent --view "Account Executive" --budget 4000
+lore compile -t agent --view "Account Executive" --budget 4000
 
 # JSON for API consumption
-lore compile ontology/ -t json -o ontology.json
+lore compile -t json -o ontology.json
 
 # Neo4j graph schema
-lore compile ontology/ -t neo4j -o schema.cypher
+lore compile -t neo4j -o schema.cypher
 
 # Embedding chunks for vector store
-lore compile ontology/ -t embeddings -o chunks.jsonl
+lore compile -t embeddings -o chunks.jsonl
 
 # Visual diagram
-lore compile ontology/ -t mermaid -o diagram.mmd
+lore compile -t mermaid -o diagram.mmd
 
 # Tool/function schemas for agent function calling
-lore compile ontology/ -t tools -o tools.json
+lore compile -t tools -o tools.json
 ```
 
 ## 5. Ingest Meeting Notes
 
 ```bash
-# From a transcript file
-lore ingest transcript ontology/ \
-  --input ./meeting-notes.txt \
-  --about Account \
-  --observed-by "product-team" \
-  --confidence 0.7
+# From a transcript file (run from inside ontology dir)
+lore ingest transcript --input ./meeting-notes.txt \
+  --about Account --observed-by "product-team" --confidence 0.7
 
 # Validate the generated observation
-lore validate ontology/
+lore validate
 ```
 
 ## 6. Learn and Evolve
@@ -138,25 +148,25 @@ Ref: observations/q1_signals.lore#usage-patterns
 EOF
 
 # Generate proposals from takeaways
-lore evolve ontology/
+lore evolve
 
 # Review and accept proposals
-lore review ontology/proposals --decision accept --reviewer domain-lead
+lore review proposals/ --decision accept --reviewer domain-lead
 ```
 
 ## 7. Monitor Ontology Health
 
 ```bash
 # Run all health checks
-lore curate ontology/ --json
+lore curate --json
 
 # Check specific aspects
-lore curate ontology/ --job staleness
-lore curate ontology/ --job coverage
-lore curate ontology/ --job consistency
+lore curate --job staleness
+lore curate --job coverage
+lore curate --job consistency
 
 # Dry run (no proposal generation)
-lore curate ontology/ --dry-run
+lore curate --dry-run
 ```
 
 ## 8. Compare Ontology Versions
@@ -172,35 +182,38 @@ An AI agent can run this complete loop without human intervention:
 ```bash
 # 1. Bootstrap
 lore setup my-domain --domain "Target Domain"
+cd my-domain
 
-# 2. Author: write .lore files to entities/, relationships/, rules/, etc.
-#    (agent writes files directly to the filesystem)
+# 2. Scaffold files
+lore add entity "Account" --description "A customer or prospect"
+lore add entity "Contact" --description "A person at an account"
+lore add relationship "Account Contacts" --from-entity Account --to-entity Contact
 
-# 3. Validate after each change
-lore validate my-domain/ --json
-# Parse JSON output, fix any errors, re-validate
+# 3. Author: edit the scaffolded .lore files directly on the filesystem
 
-# 4. Compile for use
-lore compile my-domain/ -t agent
+# 4. Validate after each change (parse JSON, fix errors, re-validate)
+lore validate --json
 
-# 5. Monitor health
-lore curate my-domain/ --json
-# Parse findings, address warnings
+# 5. Compile for use
+lore compile -t agent
 
 # 6. Search and query
-lore search my-domain/ "relevant topic" --json
-lore show my-domain/ EntityName --json
-lore list my-domain/ --type entities --json
+lore search "relevant topic" --json
+lore show Account --json
+lore list --type entities --json
 
-# 7. Evolve from outcomes
-lore evolve my-domain/
-lore review my-domain/proposals --decision accept --reviewer ai-agent
+# 7. Monitor health (parse findings, address warnings)
+lore curate --json
 
-# 8. Track stats
-lore stats my-domain/ --json
+# 8. Evolve from outcomes
+lore evolve
+lore review proposals/ --decision accept --reviewer ai-agent
+
+# 9. Track stats
+lore stats --json
 ```
 
-All commands return exit code 0 on success, 1 on error. JSON output is always valid JSON on stdout. Error messages go to stdout with non-zero exit.
+All commands return exit code 0 on success, 1 on error. JSON output is always valid JSON on stdout.
 
 ## 10. Plugin Compilers and Curators
 

@@ -28,6 +28,45 @@ BUILTIN_COMPILE_TARGETS = {
 
 BUILTIN_CURATION_JOBS = {"staleness", "coverage", "consistency", "index", "summarize", "all"}
 
+_DIR_HELP = "Ontology directory (default: auto-detect from current directory)"
+
+
+def _find_ontology_root(start: Path | None = None) -> Path | None:
+    """Walk up from *start* (or cwd) looking for lore.yaml."""
+    current = (start or Path.cwd()).resolve()
+    while True:
+        if (current / "lore.yaml").is_file():
+            return current
+        parent = current.parent
+        if parent == current:
+            return None
+        current = parent
+
+
+def _resolve_dir(raw: str | None) -> str:
+    """Return an explicit dir, or auto-detect, or exit with guidance."""
+    if raw:
+        return raw
+    root = _find_ontology_root()
+    if root:
+        return str(root)
+    print("  No ontology found. Pass a directory or run from inside an ontology (lore.yaml).")
+    sys.exit(1)
+
+
+def _opt_dir(parser: argparse.ArgumentParser):
+    """Add an optional positional ``dir`` argument to *parser*."""
+    parser.add_argument("dir", nargs="?", default=None, help=_DIR_HELP)
+
+
+def _parse_or_exit(directory: str):
+    """Parse ontology from *directory*, printing a friendly error on failure."""
+    try:
+        return parse_ontology(directory)
+    except Exception as exc:
+        print(f"  Failed to parse ontology at {directory}: {exc}")
+        sys.exit(1)
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -35,6 +74,8 @@ def main():
         description="Lore — human-readable ontology toolkit",
     )
     subparsers = parser.add_subparsers(dest="command", help="Command to run")
+
+    # --- commands that CREATE a new directory (dir required) ---
 
     # init
     p_init = subparsers.add_parser("init", help="Scaffold a new ontology directory")
@@ -65,12 +106,72 @@ def main():
         help="Freshness window (e.g., 30d, 12h, 3m)",
     )
 
+    # diff (two dirs required)
+    p_diff = subparsers.add_parser("diff", help="Compare two ontology directories")
+    p_diff.add_argument("dir1", help="First (baseline) ontology directory")
+    p_diff.add_argument("dir2", help="Second (current) ontology directory")
+    p_diff.add_argument("--json", action="store_true", dest="diff_json",
+                        help="Output as JSON")
+
+    # --- commands that OPERATE on an existing ontology (dir auto-detected) ---
+
+    # validate
+    p_validate = subparsers.add_parser("validate", help="Validate an ontology")
+    _opt_dir(p_validate)
+    p_validate.add_argument("--json", action="store_true", dest="validate_json",
+                            help="Output as JSON")
+
+    # compile
+    p_compile = subparsers.add_parser("compile", help="Compile to target format")
+    _opt_dir(p_compile)
+    p_compile.add_argument(
+        "-t", "--target", required=True,
+        help=("Compilation target (built-ins: neo4j, json, jsonld, agent, "
+              "embeddings, mermaid, palantir; plus plugins from lore.yaml)"),
+    )
+    p_compile.add_argument("-o", "--output", help="Output file (default: stdout)")
+    p_compile.add_argument("--view", help="Scope to a specific view (agent target only)")
+    p_compile.add_argument("--budget", type=int, default=None,
+                           help="Token budget for agent target (enables projection)")
+
+    # stats
+    p_stats = subparsers.add_parser("stats", help="Show ontology statistics")
+    _opt_dir(p_stats)
+    p_stats.add_argument("--json", action="store_true", dest="stats_json",
+                         help="Output as JSON")
+
+    # viz
+    p_viz = subparsers.add_parser("viz", help="ASCII visualization of entity graph")
+    _opt_dir(p_viz)
+
+    # evolve
+    p_evolve = subparsers.add_parser("evolve", help="Generate improvement proposals from outcomes")
+    _opt_dir(p_evolve)
+    p_evolve.add_argument("-o", "--output", help="Proposals output directory (default: <dir>/proposals)")
+
+    # curate
+    p_curate = subparsers.add_parser("curate", help="Run curation health checks")
+    _opt_dir(p_curate)
+    p_curate.add_argument(
+        "--job", default="all",
+        help=("Curation job (built-ins: staleness, coverage, consistency, index, "
+              "summarize, all; plus plugin curators from lore.yaml)"),
+    )
+    p_curate.add_argument("--dry-run", action="store_true",
+                          help="Report only, don't generate proposal files")
+    p_curate.add_argument("--json", action="store_true", dest="curate_json",
+                          help="Output as JSON")
+
+    # index
+    p_index = subparsers.add_parser("index", help="Generate INDEX.lore routing files")
+    _opt_dir(p_index)
+
     # ingest
     p_ingest = subparsers.add_parser("ingest", help="Ingest transcripts or memory exports")
     ingest_sub = p_ingest.add_subparsers(dest="ingest_type", help="Ingestion source type")
 
     p_ingest_transcript = ingest_sub.add_parser("transcript", help="Ingest transcript file into observations/")
-    p_ingest_transcript.add_argument("dir", help="Ontology directory")
+    _opt_dir(p_ingest_transcript)
     p_ingest_transcript.add_argument("--input", required=True, help="Transcript file path")
     p_ingest_transcript.add_argument("--about", required=True, help="Entity name for observations.about")
     p_ingest_transcript.add_argument("--name", help="Observations collection name")
@@ -86,7 +187,7 @@ def main():
                                      help="Maximum transcript sections to emit")
 
     p_ingest_memory = ingest_sub.add_parser("memory", help="Ingest memory export JSON/JSONL into observations/")
-    p_ingest_memory.add_argument("dir", help="Ontology directory")
+    _opt_dir(p_ingest_memory)
     p_ingest_memory.add_argument("--adapter", required=True,
                                  choices=["arscontexta", "mem0", "graphiti"],
                                  help="Memory export adapter schema")
@@ -113,73 +214,44 @@ def main():
     p_review.add_argument("--all", action="store_true",
                           help="Include already-reviewed files when path is a directory")
 
-    # validate
-    p_validate = subparsers.add_parser("validate", help="Validate an ontology")
-    p_validate.add_argument("dir", help="Ontology directory")
-    p_validate.add_argument("--json", action="store_true", dest="validate_json",
-                            help="Output as JSON")
-
-    # compile
-    p_compile = subparsers.add_parser("compile", help="Compile to target format")
-    p_compile.add_argument("dir", help="Ontology directory")
-    p_compile.add_argument(
-        "-t", "--target", required=True,
-        help=("Compilation target (built-ins: neo4j, json, jsonld, agent, "
-              "embeddings, mermaid, palantir; plus plugins from lore.yaml)"),
-    )
-    p_compile.add_argument("-o", "--output", help="Output file (default: stdout)")
-    p_compile.add_argument("--view", help="Scope to a specific view (agent target only)")
-    p_compile.add_argument("--budget", type=int, default=None,
-                           help="Token budget for agent target (enables projection)")
-
-    # stats
-    p_stats = subparsers.add_parser("stats", help="Show ontology statistics")
-    p_stats.add_argument("dir", help="Ontology directory")
-    p_stats.add_argument("--json", action="store_true", dest="stats_json",
-                         help="Output as JSON")
-
-    # viz
-    p_viz = subparsers.add_parser("viz", help="ASCII visualization of entity graph")
-    p_viz.add_argument("dir", help="Ontology directory")
-
-    # evolve
-    p_evolve = subparsers.add_parser("evolve", help="Generate improvement proposals from outcomes")
-    p_evolve.add_argument("dir", help="Ontology directory")
-    p_evolve.add_argument("-o", "--output", help="Proposals output directory (default: <dir>/proposals)")
-
-    # curate
-    p_curate = subparsers.add_parser("curate", help="Run curation health checks")
-    p_curate.add_argument("dir", help="Ontology directory")
-    p_curate.add_argument(
-        "--job", default="all",
-        help=("Curation job (built-ins: staleness, coverage, consistency, index, "
-              "summarize, all; plus plugin curators from lore.yaml)"),
-    )
-    p_curate.add_argument("--dry-run", action="store_true",
-                          help="Report only, don't generate proposal files")
-    p_curate.add_argument("--json", action="store_true", dest="curate_json",
-                          help="Output as JSON")
-
-    # diff
-    p_diff = subparsers.add_parser("diff", help="Compare two ontology directories")
-    p_diff.add_argument("dir1", help="First (baseline) ontology directory")
-    p_diff.add_argument("dir2", help="Second (current) ontology directory")
-    p_diff.add_argument("--json", action="store_true", dest="diff_json",
+    # list
+    p_list = subparsers.add_parser("list", help="List ontology contents")
+    _opt_dir(p_list)
+    p_list.add_argument("--type", dest="item_type",
+                        choices=["entities", "relationships", "rules", "taxonomies",
+                                 "glossary", "views", "observations", "outcomes", "decisions"],
+                        help="Filter by file type")
+    p_list.add_argument("--status",
+                        choices=["draft", "proposed", "stable", "deprecated"],
+                        help="Filter by status")
+    p_list.add_argument("--json", action="store_true", dest="list_json",
                         help="Output as JSON")
 
-    # index
-    p_index = subparsers.add_parser("index", help="Generate INDEX.lore routing files")
-    p_index.add_argument("dir", help="Ontology directory")
+    # show  (name first, dir optional at end)
+    p_show = subparsers.add_parser("show", help="Show details of a named item")
+    p_show.add_argument("name", help="Entity, relationship, rule, or view name")
+    _opt_dir(p_show)
+    p_show.add_argument("--json", action="store_true", dest="show_json",
+                        help="Output as JSON")
 
-    # add
+    # search  (query first, dir optional at end)
+    p_search = subparsers.add_parser("search", help="Full-text search across ontology")
+    p_search.add_argument("query", help="Search query")
+    _opt_dir(p_search)
+    p_search.add_argument("--limit", type=int, default=20,
+                          help="Maximum results (default: 20)")
+    p_search.add_argument("--json", action="store_true", dest="search_json",
+                          help="Output as JSON")
+
+    # add  (name first, dir optional at end)
     p_add = subparsers.add_parser("add", help="Scaffold a new .lore file")
     add_sub = p_add.add_subparsers(dest="add_type", help="Type of file to scaffold")
 
     for add_type in ["entity", "relationship", "rule", "taxonomy",
                       "glossary", "view", "observation", "outcome", "decision"]:
         p_at = add_sub.add_parser(add_type, help=f"Scaffold a new {add_type} file")
-        p_at.add_argument("dir", help="Ontology directory")
         p_at.add_argument("name", help=f"{add_type.title()} name")
+        _opt_dir(p_at)
         p_at.add_argument("--description", default="", help="Description")
         p_at.add_argument("--status", default="draft",
                           choices=["draft", "proposed", "stable", "deprecated"],
@@ -209,40 +281,13 @@ def main():
     # version
     subparsers.add_parser("version", help="Show version information")
 
-    # list
-    p_list = subparsers.add_parser("list", help="List ontology contents")
-    p_list.add_argument("dir", help="Ontology directory")
-    p_list.add_argument("--type", dest="item_type",
-                        choices=["entities", "relationships", "rules", "taxonomies",
-                                 "glossary", "views", "observations", "outcomes", "decisions"],
-                        help="Filter by file type")
-    p_list.add_argument("--status",
-                        choices=["draft", "proposed", "stable", "deprecated"],
-                        help="Filter by status")
-    p_list.add_argument("--json", action="store_true", dest="list_json",
-                        help="Output as JSON")
-
-    # show
-    p_show = subparsers.add_parser("show", help="Show details of a named item")
-    p_show.add_argument("dir", help="Ontology directory")
-    p_show.add_argument("name", help="Entity, relationship, rule, or view name")
-    p_show.add_argument("--json", action="store_true", dest="show_json",
-                        help="Output as JSON")
-
-    # search
-    p_search = subparsers.add_parser("search", help="Full-text search across ontology")
-    p_search.add_argument("dir", help="Ontology directory")
-    p_search.add_argument("query", help="Search query")
-    p_search.add_argument("--limit", type=int, default=20,
-                          help="Maximum results (default: 20)")
-    p_search.add_argument("--json", action="store_true", dest="search_json",
-                          help="Output as JSON")
-
     args = parser.parse_args()
 
     if not args.command:
         parser.print_help()
         sys.exit(1)
+
+    # --- dispatch ---
 
     if args.command == "init":
         cmd_init(args.dir, getattr(args, 'name', None), getattr(args, 'domain', ''))
@@ -256,10 +301,13 @@ def main():
             args.proposals,
             args.staleness,
         )
+    elif args.command == "diff":
+        cmd_diff(args.dir1, args.dir2, getattr(args, 'diff_json', False))
     elif args.command == "ingest":
+        d = _resolve_dir(getattr(args, 'dir', None))
         if args.ingest_type == "transcript":
             cmd_ingest_transcript(
-                args.dir,
+                d,
                 args.input,
                 args.about,
                 name=getattr(args, "name", None),
@@ -272,7 +320,7 @@ def main():
             )
         elif args.ingest_type == "memory":
             cmd_ingest_memory(
-                args.dir,
+                d,
                 args.adapter,
                 args.input,
                 args.about,
@@ -296,38 +344,37 @@ def main():
             include_all=getattr(args, "all", False),
         )
     elif args.command == "validate":
-        cmd_validate(args.dir, getattr(args, 'validate_json', False))
+        cmd_validate(_resolve_dir(args.dir), getattr(args, 'validate_json', False))
     elif args.command == "compile":
-        cmd_compile(args.dir, args.target, args.output, getattr(args, 'view', None),
-                    getattr(args, 'budget', None))
+        cmd_compile(_resolve_dir(args.dir), args.target, args.output,
+                    getattr(args, 'view', None), getattr(args, 'budget', None))
     elif args.command == "stats":
-        cmd_stats(args.dir, getattr(args, 'stats_json', False))
+        cmd_stats(_resolve_dir(args.dir), getattr(args, 'stats_json', False))
     elif args.command == "viz":
-        cmd_viz(args.dir)
+        cmd_viz(_resolve_dir(args.dir))
     elif args.command == "evolve":
-        cmd_evolve(args.dir, getattr(args, 'output', None))
+        cmd_evolve(_resolve_dir(args.dir), getattr(args, 'output', None))
     elif args.command == "curate":
-        cmd_curate(args.dir, args.job, getattr(args, 'dry_run', False),
+        cmd_curate(_resolve_dir(args.dir), args.job, getattr(args, 'dry_run', False),
                    getattr(args, 'curate_json', False))
-    elif args.command == "diff":
-        cmd_diff(args.dir1, args.dir2, getattr(args, 'diff_json', False))
     elif args.command == "index":
-        cmd_index(args.dir)
+        cmd_index(_resolve_dir(args.dir))
     elif args.command == "add":
         if not args.add_type:
             p_add.print_help()
             sys.exit(1)
+        args.dir = _resolve_dir(getattr(args, 'dir', None))
         cmd_add(args)
     elif args.command == "version":
         cmd_version()
     elif args.command == "list":
-        cmd_list(args.dir, getattr(args, 'item_type', None),
+        cmd_list(_resolve_dir(args.dir), getattr(args, 'item_type', None),
                  getattr(args, 'status', None),
                  getattr(args, 'list_json', False))
     elif args.command == "show":
-        cmd_show(args.dir, args.name, getattr(args, 'show_json', False))
+        cmd_show(_resolve_dir(args.dir), args.name, getattr(args, 'show_json', False))
     elif args.command == "search":
-        cmd_search(args.dir, args.query,
+        cmd_search(_resolve_dir(args.dir), args.query,
                    getattr(args, 'limit', 20),
                    getattr(args, 'search_json', False))
 
@@ -873,7 +920,7 @@ def cmd_validate(directory: str, as_json: bool = False):
 def cmd_compile(directory: str, target: str, output: str | None, view: str | None,
                 budget: int | None = None):
     """Compile ontology to target format."""
-    ontology = parse_ontology(directory)
+    ontology = _parse_or_exit(directory)
     target = target.strip()
 
     if target == "neo4j":
@@ -937,15 +984,19 @@ def cmd_compile(directory: str, target: str, output: str | None, view: str | Non
             sys.exit(1)
 
     if output:
-        Path(output).write_text(result)
-        print(f"✓ Compiled to {output}")
+        try:
+            Path(output).write_text(result)
+        except Exception as exc:
+            print(f"  Failed to write {output}: {exc}")
+            sys.exit(1)
+        print(f"  Compiled to {output}")
     else:
         print(result)
 
 
 def cmd_stats(directory: str, as_json: bool = False):
     """Show ontology statistics."""
-    ontology = parse_ontology(directory)
+    ontology = _parse_or_exit(directory)
     name = ontology.manifest.name if ontology.manifest else directory
     total_attrs = sum(len(e.attributes) for e in ontology.entities)
     glossary_count = len(ontology.all_glossary_entries)
@@ -1017,10 +1068,10 @@ def cmd_stats(directory: str, as_json: bool = False):
 
 def cmd_viz(directory: str):
     """ASCII visualization of entity relationship graph."""
-    ontology = parse_ontology(directory)
+    ontology = _parse_or_exit(directory)
     name = ontology.manifest.name if ontology.manifest else directory
 
-    print(f"\n🔗 Entity Graph: {name}\n")
+    print(f"\n  Entity Graph: {name}\n")
 
     # Build adjacency info
     for entity in ontology.entities:
@@ -1056,7 +1107,7 @@ def cmd_evolve(directory: str, output: str | None):
     """Generate improvement proposals from outcomes."""
     from .evolution import evolve
 
-    ontology = parse_ontology(directory)
+    ontology = _parse_or_exit(directory)
     output_dir = Path(output) if output else Path(directory) / "proposals"
 
     total_outcomes = len(ontology.all_outcomes)
@@ -1098,7 +1149,7 @@ def cmd_index(directory: str):
     """Generate INDEX.lore routing files."""
     from .indexer import write_indexes
 
-    ontology = parse_ontology(directory)
+    ontology = _parse_or_exit(directory)
     name = ontology.manifest.name if ontology.manifest else directory
 
     print(f"\n📇 Indexing: {name}\n")
@@ -1117,11 +1168,12 @@ def cmd_curate(directory: str, job: str, dry_run: bool, as_json: bool = False):
         curate_index, curate_summarize, curate_all,
     )
 
-    ontology = parse_ontology(directory)
+    ontology = _parse_or_exit(directory)
     name = ontology.manifest.name if ontology.manifest else directory
     root_path = Path(directory)
 
-    print(f"\n🩺 Curating: {name}\n")
+    if not as_json:
+        print(f"\n  Curating: {name}\n")
 
     def _run_plugin_curator(job_name: str):
         try:
@@ -1255,8 +1307,8 @@ def cmd_add(args):
     target_dir = root / dir_map[add_type]
     target_file = target_dir / f"{slug}.lore"
 
-    if not root.is_dir():
-        print(f"  Ontology directory not found: {root}")
+    if not root.is_dir() or not (root / "lore.yaml").is_file():
+        print(f"  Not a Lore ontology (no lore.yaml): {root}")
         sys.exit(1)
 
     if target_file.exists():
@@ -1423,10 +1475,6 @@ def cmd_add(args):
             f"Rationale: Why.\n"
         )
 
-    else:
-        print(f"  Unknown type: {add_type}")
-        sys.exit(1)
-
     target_file.write_text(content)
     print(f"  Created: {target_file}")
     print(f"  Next: edit the file, then run: lore validate {root}")
@@ -1441,7 +1489,7 @@ def cmd_version():
 def cmd_list(directory: str, item_type: str | None, status_filter: str | None,
              as_json: bool = False):
     """List ontology contents."""
-    ontology = parse_ontology(directory)
+    ontology = _parse_or_exit(directory)
     items: list[dict] = []
 
     def _add(kind: str, name: str, status: str | None = None,

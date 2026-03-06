@@ -134,26 +134,28 @@ For complete format reference: see [FORMAT.md](references/FORMAT.md)
 
 ## CLI Commands
 
+Most commands auto-detect the ontology directory by walking up from CWD looking for `lore.yaml`. You only need to pass a directory when creating (`init`, `setup`) or comparing (`diff`).
+
 | Command | Purpose |
 |---------|---------|
 | `lore version` | Show version |
 | `lore init <dir>` | Scaffold minimal ontology |
 | `lore setup <dir>` | AI-first domain bootstrap |
-| `lore add <type> <dir> <name>` | Scaffold a new .lore file |
-| `lore validate <dir> [--json]` | Validate syntax and semantics |
-| `lore compile <dir> -t <target> [-o file]` | Compile to target format |
-| `lore list <dir> [--type T] [--json]` | List ontology contents |
-| `lore show <dir> <name> [--json]` | Show item details |
-| `lore search <dir> <query> [--json]` | Full-text search |
-| `lore stats <dir> [--json]` | Show statistics |
-| `lore viz <dir>` | ASCII entity graph |
-| `lore curate <dir> [--json]` | Run health checks |
-| `lore evolve <dir>` | Generate proposals from outcomes |
-| `lore ingest transcript <dir>` | Ingest meeting transcripts |
-| `lore ingest memory <dir>` | Ingest memory exports |
+| `lore add <type> <name>` | Scaffold a new .lore file |
+| `lore validate [--json]` | Validate syntax and semantics |
+| `lore compile -t <target> [-o file]` | Compile to target format |
+| `lore list [--type T] [--json]` | List ontology contents |
+| `lore show <name> [--json]` | Show item details |
+| `lore search <query> [--json]` | Full-text search |
+| `lore stats [--json]` | Show statistics |
+| `lore viz` | ASCII entity graph |
+| `lore curate [--json]` | Run health checks |
+| `lore evolve` | Generate proposals from outcomes |
+| `lore ingest transcript` | Ingest meeting transcripts |
+| `lore ingest memory` | Ingest memory exports |
 | `lore review <path>` | Review proposals |
 | `lore diff <dir1> <dir2>` | Compare ontologies |
-| `lore index <dir>` | Generate routing indexes |
+| `lore index` | Generate routing indexes |
 
 Compilation targets: `agent`, `json`, `jsonld`, `neo4j`, `embeddings`, `mermaid`, `palantir`, `tools`, `agents.md`, `metrics`
 
@@ -163,17 +165,16 @@ For complete CLI reference: see [CLI.md](references/CLI.md)
 
 An AI agent can fully manage a Lore ontology using only the filesystem and CLI:
 
-1. **Bootstrap**: Run `lore setup` to create the ontology structure
-2. **Scaffold files**: Run `lore add entity <dir> "Name"` to create correctly-formatted files
-3. **Author entities**: Edit the scaffolded files or write `.lore` files directly
-3. **Define relationships**: Write `.lore` files in `relationships/`
-4. **Add rules**: Write `.lore` files in `rules/`
-5. **Validate continuously**: Run `lore validate <dir> --json` after each change
-6. **Compile for use**: Run `lore compile <dir> -t agent` to get agent-ready context
-7. **Monitor health**: Run `lore curate <dir> --json` to detect staleness and gaps
+1. **Bootstrap**: `lore setup my-domain --domain "Target Domain"`
+2. **Scaffold files**: `lore add entity "Account"` (from inside the ontology dir)
+3. **Author**: Edit the scaffolded files or write `.lore` files directly
+4. **Define relationships**: `lore add relationship "Links" --from-entity A --to-entity B`
+5. **Validate continuously**: `lore validate --json` after each change
+6. **Compile for use**: `lore compile -t agent` to get agent-ready context
+7. **Monitor health**: `lore curate --json` to detect staleness and gaps
 8. **Learn from outcomes**: Write outcomes with `Takeaway:` markers, then `lore evolve`
-9. **Review proposals**: Use `lore review` to accept/reject generated proposals
+9. **Review proposals**: `lore review proposals/ --decision accept --reviewer agent`
 
-All commands return proper exit codes (0 = success, 1 = error) and support `--json` for machine-readable output where applicable.
+All commands return exit codes (0 = success, 1 = error) and support `--json` for machine-readable output where applicable.
 
 For detailed workflows: see [WORKFLOWS.md](references/WORKFLOWS.md)
